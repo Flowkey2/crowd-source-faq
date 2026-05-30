@@ -13,6 +13,7 @@ import {
   getSolvedPosts,
   getAnswersList,
   requestExpertHelp,
+  reportPost,
 } from '../controllers/communityController.js';
 import { searchCommunityPosts } from '../controllers/communitySearchController.js';
 import { protect, authorize } from '../middleware/auth.js';
@@ -33,6 +34,7 @@ router.post('/:id/comments/:commentId/downvote', protect, toggleCommentDownvote)
 router.patch('/:id/comments/:commentId/verify', protect, authorize('admin', 'moderator'), verifyComment);
 router.patch('/:id/resolve', protect, resolvePost);
 router.post('/:id/request-expert', protect, requestExpertHelp);
+router.post('/:id/report', protect, reportPost);
 router.delete('/:id', protect, authorize('admin', 'moderator'), deletePost);
 
 export default router;

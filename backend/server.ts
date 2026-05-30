@@ -17,6 +17,7 @@ import notificationRoutes from './routes/notification.js';
 import teaRoutes from './routes/tea.js';
 import reputationRoutes from './routes/reputation.js';
 import moderationRoutes from './routes/moderation.js';
+import zoomRoutes from './routes/zoom.js';
 import { logger } from './utils/logger.js';
 import * as Sentry from '@sentry/node';
 import { expressIntegration } from '@sentry/node';
@@ -126,6 +127,7 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/notifications/tea', teaRoutes);
+app.use('/api/zoom', zoomRoutes);
 
 // 6. Health Check Endpoint
 // Useful for deployment platforms (like Vercel/AWS) to verify the server is alive
@@ -214,6 +216,20 @@ function validateEnv(): void {
     if (!process.env.REDIS_TOKEN) {
       errors.push('REDIS_TOKEN is required when REDIS_URL is provided');
     }
+  }
+
+  // Optional: Zoom OAuth
+  const zoomClientId = process.env.ZOOM_CLIENT_ID;
+  const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+  if (zoomClientId !== undefined && !zoomClientSecret) {
+    errors.push('ZOOM_CLIENT_SECRET is required when ZOOM_CLIENT_ID is provided');
+  }
+  if (zoomClientSecret !== undefined && !zoomClientId) {
+    errors.push('ZOOM_CLIENT_ID is required when ZOOM_CLIENT_SECRET is provided');
+  }
+  const redirectUri = process.env.ZOOM_REDIRECT_URI;
+  if (redirectUri !== undefined && !/^https?:\/\/.+/.test(redirectUri)) {
+    errors.push('ZOOM_REDIRECT_URI must be a valid URL');
   }
 
   if (errors.length > 0) {

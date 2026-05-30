@@ -52,6 +52,13 @@ export interface IUser extends Document {
   suspendedUntil?: Date;
   isDeleted: boolean;
   deletedAt?: Date;
+  // Zoom OAuth (per-user)
+  zoomConnected: boolean;
+  zoomUserId?: string;        // Zoom's internal user ID
+  zoomAccessToken?: string;
+  zoomRefreshToken?: string;
+  zoomTokenExpiry?: Date;
+  zoomConnectedAt?: Date;
   // Methods
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -139,6 +146,5 @@ userSchema.index({ reputation: -1 });
 userSchema.index({ tier: 1 });
 userSchema.index({ isBanned: 1 });
 userSchema.index({ isDeleted: 1 });
-userSchema.index({ email: 1 });
 
 export default mongoose.model<IUser>('User', userSchema, 'yaksha_faq_users');

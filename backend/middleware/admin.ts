@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import User, { type UserRole } from '../models/User.js';
-import '../types/express.js'; // picks up the global Request interface
 
 /**
  * Admin-only middleware — allows both 'admin' and 'moderator' roles.

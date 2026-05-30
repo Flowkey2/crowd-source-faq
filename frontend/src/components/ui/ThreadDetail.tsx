@@ -45,7 +45,26 @@ const formatDate = (d: string | undefined) =>
     year: 'numeric',
   });
 
-// ─── Comment Node (recursive) ───────────────────────────────────────────────────
+// Reddit-style depth colors — each nesting level gets a distinct accent
+const DEPTH_COLORS = [
+  'border-accent',
+  'border-emerald-400',
+  'border-amber-400',
+  'border-rose-400',
+  'border-violet-400',
+];
+const DEPTH_BARS  = [
+  'bg-accent',
+  'bg-emerald-400',
+  'bg-amber-400',
+  'bg-rose-400',
+  'bg-violet-400',
+];
+
+// Count total descendants recursively
+function countReplies(comment: Comment): number {
+  return (comment.replies?.length ?? 0) + (comment.replies ?? []).reduce((s, r) => s + countReplies(r), 0);
+}
 
 interface CommentNodeProps {
   comment: Comment;
@@ -54,6 +73,8 @@ interface CommentNodeProps {
   userRole: string;
   onReplyAdded: (newComment: Comment, parentId: string | null) => void;
   depth?: number;
+  threadColor?: string;
+  barColor?: string;
 }
 
 function CommentNode({
@@ -63,23 +84,62 @@ function CommentNode({
   userRole,
   onReplyAdded,
   depth = 0,
+  threadColor,
+  barColor,
 }: CommentNodeProps) {
+  const [collapsed, setCollapsed] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
   const [localReplies, setLocalReplies] = useState<Comment[]>(comment.replies ?? []);
+  const [localUpvotes, setLocalUpvotes] = useState(comment.upvotes ?? []);
+  const [localDownvotes, setLocalDownvotes] = useState(comment.downvotes ?? []);
 
-  const cUpvotes = comment.upvotes?.length ?? 0;
-  const cDownvotes = comment.downvotes?.length ?? 0;
-  const netScore = cUpvotes - cDownvotes;
-  const hasUpvoted = comment.upvotes?.some(
-    (u) => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() === currentUserId
-  );
-  const hasDownvoted = comment.downvotes?.some(
-    (u) => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() === currentUserId
-  );
+  const color = threadColor ?? DEPTH_COLORS[depth % DEPTH_COLORS.length];
+  const bar  = barColor   ?? DEPTH_BARS[depth % DEPTH_BARS.length];
+  const maxDepth = depth >= 4;
+
+  const cUpvotes   = localUpvotes.length;
+  const cDownvotes = localDownvotes.length;
+  const netScore   = cUpvotes - cDownvotes;
+  const hasUpvoted = localUpvotes.some(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() === currentUserId);
+  const hasDownvoted = localDownvotes.some(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() === currentUserId);
   const commentOpacity = netScore >= 0 ? 1 : Math.max(0.15, 1 - Math.abs(netScore) * 0.2);
-  const maxDepth = depth >= 3;
+  const totalReplies = countReplies(comment) + localReplies.length;
+  const isExpert = comment.isExpertAnswer;
+  const isVerified = comment.verified;
+
+  const doUpvote = () =>
+    api.post<{ upvotedByMe: boolean }>(`/community/${postId}/comments/${comment._id}/upvote`)
+      .then(res => {
+        setLocalUpvotes(prev =>
+          res.data.upvotedByMe
+            ? [...prev, currentUserId]
+            : prev.filter(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() !== currentUserId)
+        );
+        setLocalDownvotes(prev =>
+          prev.filter(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() !== currentUserId)
+        );
+      }).catch(console.error);
+
+  const doDownvote = () =>
+    api.post<{ deleted?: boolean; downvotedByMe: boolean }>(
+      `/community/${postId}/comments/${comment._id}/downvote`
+    ).then(res => {
+      if (res.data.deleted) {
+        try { new Audio('/fahhhhh.mp3').play(); } catch (_) {}
+        const el = document.getElementById(`comment-${comment._id}`);
+        if (el) { el.style.setProperty('--current-opacity', String(commentOpacity)); el.classList.add('comment-dying'); }
+      }
+      setLocalDownvotes(prev =>
+        res.data.downvotedByMe
+          ? [...prev, currentUserId]
+          : prev.filter(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() !== currentUserId)
+      );
+      setLocalUpvotes(prev =>
+        prev.filter(u => (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() !== currentUserId)
+      );
+    }).catch(console.error);
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,145 +150,171 @@ function CommentNode({
         `/community/${postId}/comments?parentId=${comment._id}`,
         { body: replyText }
       );
-      setLocalReplies((prev) => [...prev, res.data.comment]);
+      setLocalReplies(prev => [...prev, res.data.comment]);
       setReplyText('');
       setShowReplyBox(false);
       onReplyAdded(res.data.comment, comment._id);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setReplyLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setReplyLoading(false); }
   };
 
+  // Reddit-style: vote buttons sit on a vertical vote column left of the content
   return (
     <div
       id={`comment-${comment._id}`}
-      className="flex items-start gap-2.5 transition-opacity duration-300 relative"
+      className="flex items-stretch gap-0 transition-opacity duration-300 group/comment"
       style={{ opacity: commentOpacity }}
     >
-      <Avatar name={comment.author?.name} size="sm" />
-
-      <div
-        className={`flex-1 rounded-xl px-3 py-2.5 relative overflow-hidden ${
-          comment.isExpertAnswer ? 'bg-accent/5 border border-accent/20' : 'bg-mist'
-        }`}
-      >
-        {netScore > 2 && <div className="comment-fire-glow" />}
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-xs font-medium text-ink">{comment.author?.name || 'User'}</span>
-            {comment.isExpertAnswer && <Badge variant="accent">👑 Expert</Badge>}
-            {comment.verified && <span className="verified-badge">✅ Verified</span>}
-            <span className="text-xs text-ink-faint">{formatDate(comment.createdAt)}</span>
-            {depth > 0 && (
-              <span className="text-[10px] text-ink-faint ml-1">
-                ↳ {depth === 1 ? 'reply' : depth === 2 ? 'thread' : 'deep'}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-ink/75 leading-relaxed">{comment.body}</p>
-
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={() =>
-                api.post<{ upvotedByMe: boolean }>(`/community/${postId}/comments/${comment._id}/upvote`)
-                  .then((res) => {
-                    comment.upvotes = res.data.upvotedByMe
-                      ? [...(comment.upvotes ?? []), currentUserId]
-                      : (comment.upvotes ?? []).filter(
-                          (u) =>
-                            (typeof u === 'object' ? (u as { _id?: string })._id || u : u)?.toString() !== currentUserId
-                        );
-                  })
-                  .catch(console.error)
-              }
-              className={`comment-vote-btn ${hasUpvoted ? 'upvoted' : ''}`}
-              title="Upvote"
-            >
-              <span className="emoji-upvote">{hasUpvoted ? '🔥' : '🤌'}</span>
-              {cUpvotes > 0 && <span className="text-xs font-semibold">{cUpvotes}</span>}
-            </button>
-
-            <button
-              onClick={() =>
-                api.post<{ deleted?: boolean; downvotedByMe: boolean }>(
-                  `/community/${postId}/comments/${comment._id}/downvote`
-                ).then((res) => {
-                  if (res.data.deleted) {
-                    try { new Audio('/fahhhhh.mp3').play(); } catch (_) {}
-                    const el = document.getElementById(`comment-${comment._id}`);
-                    if (el) { el.style.setProperty('--current-opacity', String(commentOpacity)); el.classList.add('comment-dying'); }
-                  }
-                }).catch(console.error)
-              }
-              className={`comment-vote-btn ${hasDownvoted ? 'downvoted' : ''}`}
-              title="Downvote"
-            >
-              <span className="emoji-downvote">🥀</span>
-              {cDownvotes > 0 && <span className="text-xs font-semibold">{cDownvotes}</span>}
-            </button>
-
-            {netScore < 0 && (
-              <span className="text-[10px] text-ink-faint ml-1 melting-text">🧊 melting...</span>
-            )}
-
-            {!maxDepth && (
-              <button
-                onClick={() => setShowReplyBox((v) => !v)}
-                className="text-[10px] text-ink-faint hover:text-accent transition-colors ml-1"
-              >
-                {showReplyBox ? 'Cancel' : '↩ Reply'}
-              </button>
-            )}
-
-            {(userRole === 'admin' || userRole === 'moderator') && (
-              <button
-                onClick={() =>
-                  api.patch<{ verified: boolean }>(`/community/${postId}/comments/${comment._id}/verify`)
-                    .then((res) => { comment.verified = res.data.verified; })
-                    .catch(console.error)
-                }
-                className="ml-auto text-[10px] text-ink-faint hover:text-accent transition-colors"
-              >
-                {comment.verified ? 'Unverify' : '✅ Verify'}
-              </button>
-            )}
-          </div>
-
-          {showReplyBox && (
-            <form onSubmit={handleReply} className="mt-2 flex gap-1.5 items-start">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={2}
-                placeholder={`Reply to ${comment.author?.name || 'user'}…`}
-                className="flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none"
-                autoFocus
-              />
-              <Button type="submit" size="sm" disabled={!replyText.trim()} loading={replyLoading} className="flex-shrink-0 mt-0.5">
-                Reply
-              </Button>
-            </form>
-          )}
-        </div>
+      {/* Vote column */}
+      <div className="flex flex-col items-center gap-0 mr-2 flex-shrink-0">
+        <button
+          onClick={doUpvote}
+          className={`w-6 h-6 rounded flex items-center justify-center transition-all ${hasUpvoted ? 'text-orange-500' : 'text-ink-faint hover:text-orange-400'}`}
+          title="Upvote"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill={hasUpvoted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+            <path d="M5 1L9 7H1L5 1Z" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <span className={`text-[10px] font-bold leading-none py-0.5 ${netScore > 0 ? 'text-orange-500' : netScore < 0 ? 'text-blue-400' : 'text-ink-faint'}`}>
+          {netScore > 0 ? '+' : ''}{netScore || '0'}
+        </span>
+        <button
+          onClick={doDownvote}
+          className={`w-6 h-6 rounded flex items-center justify-center transition-all ${hasDownvoted ? 'text-blue-500' : 'text-ink-faint hover:text-blue-400'}`}
+          title="Downvote"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill={hasDownvoted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+            <path d="M5 9L1 3H9L5 9Z" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
 
-      {localReplies.length > 0 && (
-        <div className="flex-1 pl-3 border-l-2 border-border/30 ml-2 space-y-2 mt-1">
-          {localReplies.map((reply) => (
-            <CommentNode
-              key={reply._id}
-              comment={reply}
-              postId={postId}
-              currentUserId={currentUserId}
-              userRole={userRole}
-              onReplyAdded={onReplyAdded}
-              depth={depth + 1}
-            />
-          ))}
-        </div>
-      )}
+      {/* Thread line + content column */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Collapse toggle row */}
+        <button
+          onClick={() => setCollapsed(v => !v)}
+          className="flex items-center gap-1.5 mb-0.5 text-left hover:opacity-80 transition-opacity"
+          title={collapsed ? 'Expand thread' : 'Collapse thread'}
+        >
+          {/* Vertical tree line */}
+          <div className={`w-0.5 h-4 flex-shrink-0 rounded-full ${bar} ${collapsed ? 'opacity-30' : 'opacity-100'} transition-all`} />
+          <span className="text-[10px] text-ink-faint font-medium">
+            {collapsed
+              ? `[+${totalReplies + 1}]`
+              : `[-]`
+            }
+          </span>
+        </button>
+
+        {!collapsed && (
+          <>
+            {/* Comment card */}
+            <div
+              className={`rounded-xl px-3 py-2.5 relative overflow-hidden ${
+                isExpert ? 'bg-accent/5 border border-accent/20' : 'bg-mist'
+              }`}
+            >
+              {netScore > 2 && <div className="comment-fire-glow" />}
+              <div className="relative z-10">
+                {/* Header: avatar + author + badge + time + score */}
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <Avatar name={comment.author?.name} size="xs" />
+                  <span className="text-xs font-semibold text-ink">{comment.author?.name || 'User'}</span>
+                  {isExpert && <Badge variant="accent">👑</Badge>}
+                  {isVerified && <span className="text-[10px] text-emerald-500">✓</span>}
+                  <span className="text-[10px] text-ink-faint">·</span>
+                  <span className="text-[10px] text-ink-faint">{formatDate(comment.createdAt)}</span>
+                  {depth > 0 && (
+                    <span className={`text-[10px] font-medium ml-1 px-1.5 py-0.5 rounded-full border ${color.replace('border-', 'border-')} ${color.replace('border-', 'text-')} ${color.replace('border-', 'bg-')}/10`}>
+                      ↳ depth {depth}
+                    </span>
+                  )}
+                  <span className={`ml-auto text-[10px] font-bold ${netScore > 0 ? 'text-orange-500' : netScore < 0 ? 'text-blue-400' : 'text-ink-faint'}`}>
+                    {netScore > 0 ? '+' : ''}{netScore} pts
+                  </span>
+                </div>
+
+                {/* Body */}
+                <p className="text-sm text-ink/75 leading-relaxed whitespace-pre-wrap break-words">{comment.body}</p>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 mt-2">
+                  <button
+                    onClick={() => !hasUpvoted && doUpvote()}
+                    className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-all ${hasUpvoted ? 'text-orange-500 bg-orange-500/10' : 'text-ink-faint hover:text-orange-500 hover:bg-orange-500/10'}`}
+                  >
+                    {hasUpvoted ? '↑ Upvoted' : '↑ Upvote'}
+                  </button>
+                  <button
+                    onClick={() => !hasDownvoted && doDownvote()}
+                    className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-all ${hasDownvoted ? 'text-blue-500 bg-blue-500/10' : 'text-ink-faint hover:text-blue-500 hover:bg-blue-500/10'}`}
+                  >
+                    {hasDownvoted ? '↓ Downvoted' : '↓ Downvote'}
+                  </button>
+                  {!maxDepth && (
+                    <button
+                      onClick={() => setShowReplyBox(v => !v)}
+                      className="text-[10px] text-ink-faint hover:text-accent transition-colors px-1.5 py-0.5 rounded hover:bg-accent/10"
+                    >
+                      {showReplyBox ? '✕ Cancel' : '↩ Reply'}
+                    </button>
+                  )}
+                  {(userRole === 'admin' || userRole === 'moderator') && (
+                    <button
+                      onClick={() =>
+                        api.patch<{ verified: boolean }>(`/community/${postId}/comments/${comment._id}/verify`)
+                          .then(res => { comment.verified = res.data.verified; })
+                          .catch(console.error)
+                      }
+                      className="ml-auto text-[10px] text-ink-faint hover:text-emerald-500 transition-colors"
+                    >
+                      {isVerified ? 'Unverify' : '✅ Verify'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Reply form */}
+                {showReplyBox && (
+                  <form onSubmit={handleReply} className="mt-2 flex gap-1.5 items-start">
+                    <textarea
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      rows={2}
+                      placeholder={`Reply to ${comment.author?.name || 'user'}…`}
+                      className="flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none"
+                      autoFocus
+                    />
+                    <Button type="submit" size="sm" disabled={!replyText.trim()} loading={replyLoading} className="flex-shrink-0 mt-0.5">
+                      Post
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </div>
+
+            {/* Children */}
+            {localReplies.length > 0 && (
+              <div className={`mt-1 border-l-2 ${color.replace('border-', 'border-')}/40 rounded-bl ml-1 pl-2 space-y-1`}>
+                {localReplies.map(reply => (
+                  <CommentNode
+                    key={reply._id}
+                    comment={reply}
+                    postId={postId}
+                    currentUserId={currentUserId}
+                    userRole={userRole}
+                    onReplyAdded={onReplyAdded}
+                    depth={depth + 1}
+                    threadColor={DEPTH_COLORS[(depth + 1) % DEPTH_COLORS.length]}
+                    barColor={DEPTH_BARS[(depth + 1) % DEPTH_BARS.length]}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -249,6 +335,11 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [resolveText, setResolveText] = useState('');
   const [resolveLoading, setResolveLoading] = useState(false);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isAnswered = post?.status === 'answered';
   const upvoteCount = post?.upvotes?.length ?? 0;
@@ -289,7 +380,11 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
               ),
         } : prev
       );
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Upvote failed. Please try again.';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 3000);
+    }
     finally { setUpvoteLoading(false); }
   };
 
@@ -303,7 +398,11 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
         prev ? { ...prev, comments: [...(prev.comments ?? []), res.data.comment] } : prev
       );
       setCommentText('');
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Comment failed. Please try again.';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 3000);
+    }
     finally { setCommentLoading(false); }
   };
 
@@ -320,6 +419,18 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
       setResolveText('');
     } catch (e) { console.error(e); }
     finally { setResolveLoading(false); }
+  };
+
+  const handleReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportReason.trim() || reportLoading || !post) return;
+    setReportLoading(true);
+    try {
+      await api.post(`/community/${post._id}/report`, { reason: reportReason.trim() });
+      setReportDone(true);
+      setShowReportForm(false);
+    } catch (e) { console.error(e); }
+    finally { setReportLoading(false); }
   };
 
   const handleReplyAdded = useCallback((newComment: Comment, parentId: string | null) => {
@@ -357,12 +468,20 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
     >
       <div className="relative w-full max-w-lg bg-card rounded-2xl border border-border shadow-float overflow-hidden flex flex-col"
         style={{ maxHeight: '90vh' }}>
+        {/* Action error banner */}
+        {actionError && (
+          <div className="mx-5 mt-4 px-4 py-2.5 bg-danger-light border border-danger/20 rounded-xl text-xs text-danger flex items-center justify-between gap-2">
+            <span>{actionError}</span>
+            <button onClick={() => setActionError(null)} className="text-danger/60 hover:text-danger font-bold text-sm leading-none">✕</button>
+          </div>
+        )}
         {/* Sticky header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card flex-shrink-0">
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-mist flex items-center justify-center text-ink-soft hover:text-ink hover:bg-border transition-all">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <button onClick={onClose} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-mist text-sm font-medium text-ink-soft hover:text-ink hover:bg-border transition-all">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+            Back to Community
           </button>
           <Badge variant={isAnswered ? 'success' : 'warning'}>
             {isAnswered ? '✓ Answered' : '○ Open'}
@@ -407,6 +526,40 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
                 {upvoteCount > 0 && <span>{upvoteCount}</span>}
                 <span className="text-[10px] opacity-70">{hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
               </button>
+
+              {reportDone ? (
+                <span className="text-xs text-success font-medium">✓ Reported</span>
+              ) : showReportForm ? (
+                <form onSubmit={handleReport} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    placeholder="Reason for reporting…"
+                    maxLength={200}
+                    autoFocus
+                    className="rounded-lg border border-border bg-mist px-2.5 py-1.5 text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-danger/30 w-44"
+                  />
+                  <button type="submit" disabled={reportLoading || !reportReason.trim()} className="rounded-lg bg-danger text-white px-2.5 py-1.5 text-xs font-medium hover:bg-danger/80 transition-all disabled:opacity-50">
+                    {reportLoading ? '…' : 'Send'}
+                  </button>
+                  <button type="button" onClick={() => { setShowReportForm(false); setReportReason(''); }} className="rounded-lg bg-mist text-ink-soft px-2.5 py-1.5 text-xs hover:text-ink transition-all">
+                    ✕
+                  </button>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setShowReportForm(true)}
+                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-ink-faint hover:text-danger hover:bg-danger-light transition-all"
+                  title="Report this post"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 2h8v5.5L7 10.5 5.5 9.5V8H2V2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                    <path d="M4.5 5.5h3M4.5 7h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  Report
+                </button>
+              )}
             </div>
           </div>
 
@@ -442,29 +595,30 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
             </form>
           )}
 
-          {/* Comments */}
+          {/* Comments — Reddit-style threaded */}
           <div className="px-5 py-4 border-t border-border/30">
             <h3 className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-3">
               Discussion ({topLevelComments.length})
             </h3>
-            <div className="divide-y divide-border/30">
-              {topLevelComments.length === 0 ? (
-                <p className="text-sm text-ink-faint text-center py-6">No comments yet. Be the first to comment!</p>
-              ) : (
-                topLevelComments.map((comment: Comment) => (
-                  <div key={comment._id} className="pt-4 pb-2">
-                    <CommentNode
-                      comment={comment}
-                      postId={post._id}
-                      currentUserId={currentUserId}
-                      userRole={userRole}
-                      onReplyAdded={handleReplyAdded}
-                      depth={0}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
+            {topLevelComments.length === 0 ? (
+              <p className="text-sm text-ink-faint text-center py-6">No comments yet. Be the first to comment!</p>
+            ) : (
+              <div className="space-y-2">
+                {topLevelComments.map((comment: Comment) => (
+                  <CommentNode
+                    key={comment._id}
+                    comment={comment}
+                    postId={post._id}
+                    currentUserId={currentUserId}
+                    userRole={userRole}
+                    onReplyAdded={handleReplyAdded}
+                    depth={0}
+                    threadColor={DEPTH_COLORS[0]}
+                    barColor={DEPTH_BARS[0]}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -476,7 +630,7 @@ export default function ThreadDetail({ postId, onClose }: ThreadDetailProps) {
               placeholder="Add to the discussion…"
               className="flex-1 rounded-xl border border-border bg-mist px-3 py-2.5 text-sm text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:bg-card transition-all resize-none"
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(e); }
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!commentLoading) handleComment(e); }
               }} />
             <Button type="submit" size="md" disabled={!commentText.trim()} loading={commentLoading} className="flex-shrink-0 mt-0.5">
               Post

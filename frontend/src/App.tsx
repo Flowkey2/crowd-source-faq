@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 // User pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AccountPage from './pages/AccountPage';
 import HomePage from './pages/HomePage';
 import FAQPage from './pages/FAQPage';
 import CommunityPage from './pages/CommunityPage';
@@ -18,6 +19,8 @@ import AdminCommunity from './admin/pages/AdminCommunity';
 import AdminModeration from './admin/pages/AdminModeration';
 import AdminLeaderboard from './admin/pages/AdminLeaderboard';
 import AdminUnresolvedSearch from './admin/pages/AdminUnresolvedSearch';
+import AdminZoomMeetings from './admin/pages/AdminZoomMeetings';
+import AdminZoomInsights from './admin/pages/AdminZoomInsights';
 import AdminLayout from './admin/components/layout/AdminLayout';
 
 interface ProtectedRouteProps {
@@ -90,6 +93,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/faq" element={<ProtectedRoute><FAQPage /></ProtectedRoute>} />
       <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+      <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
 
       {/* Admin Panel dedicated routes (guarded by AdminRoute) */}
       <Route path="/admin/login" element={<AdminLogin />} />
@@ -101,6 +105,8 @@ function AppRoutes() {
       <Route path="/admin/moderation" element={<AdminRoute><AdminLayout><AdminModeration /></AdminLayout></AdminRoute>} />
       <Route path="/admin/leaderboard" element={<AdminRoute><AdminLayout><AdminLeaderboard /></AdminLayout></AdminRoute>} />
       <Route path="/admin/unresolved-search" element={<AdminRoute><AdminLayout><AdminUnresolvedSearch /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/zoom-meetings" element={<AdminRoute><AdminLayout><AdminZoomMeetings /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/zoom-insights" element={<AdminRoute><AdminLayout><AdminZoomInsights /></AdminLayout></AdminRoute>} />
 
       {/* Catch-all fallback: Redirect any unknown URLs to the home page */}
       <Route path="*" element={<Navigate to="/" replace />} />

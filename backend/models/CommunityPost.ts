@@ -77,6 +77,7 @@ export interface ICommunityPost extends Document {
   answerIsExpert?: boolean;
   upvotes: Types.ObjectId[];
   comments: IComment[];
+  reports: Array<{ reportedBy: Types.ObjectId; reason: string; createdAt?: Date }>;
   embedding?: number[];
 }
 
@@ -118,6 +119,14 @@ const communityPostSchema = new MongooseSchema(
     },
     comments: {
       type: [commentSchema],
+      default: [],
+    },
+    reports: {
+      type: [{
+        reportedBy: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
+        reason: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now },
+      }],
       default: [],
     },
     embedding: {

@@ -56,6 +56,5 @@ badgeSchema.static('seedDefaults', async function () {
 });
 
 badgeSchema.index({ type: 1 });
-badgeSchema.index({ slug: 1 }, { unique: true });
 
 export default mongoose.model<IBadge>('Badge', badgeSchema, 'yaksha_faq_badges');

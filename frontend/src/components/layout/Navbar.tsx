@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationBell from '../../components/ui/NotificationBell';
@@ -20,12 +20,13 @@ function getAvatarColor(name?: string): string {
 }
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -33,11 +34,20 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Close profile dropdown on outside click — ref-based to avoid stale closure
   useEffect(() => {
     if (!profileOpen) return;
-    const handleClick = () => setProfileOpen(false);
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    const handleClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    // Small delay so the click that opened the menu doesn't immediately close it
+    const timer = setTimeout(() => document.addEventListener('click', handleClick), 10);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClick);
+    };
   }, [profileOpen]);
 
   const handleLogout = () => {
@@ -92,66 +102,95 @@ export default function Navbar() {
         {/* Right Side */}
         <div className="flex items-center gap-2 flex-shrink-0">
 
-          {!isCommunityActive && (
+        {/* Unauthenticated — show Sign in / Register */}
+        {!isAuthenticated && (
+          <div className="hidden lg:flex items-center gap-2">
             <button
-              onClick={() => navigate('/community?ask=true')}
-              className="hidden lg:flex items-center px-5 py-[7px] text-[0.82rem] font-semibold text-ink bg-transparent border-[1.5px] border-ink rounded-full cursor-pointer transition-all duration-300 ease-smooth tracking-[0.01em] leading-none hover:bg-ink hover:text-white hover:shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:-translate-y-px active:translate-y-0"
+              onClick={() => navigate('/login')}
+              className="px-4 py-1.5 text-sm font-medium text-ink-soft hover:text-ink transition-colors"
             >
-              Ask Question
+              Sign in
             </button>
-          )}
-
-          <div className="hidden lg:block w-px h-6 bg-border mx-1" />
-
-          <NotificationBell />
-
-          {/* User Avatar + Dropdown */}
-          <div className="relative">
             <button
-              onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen); }}
-              className="flex items-center gap-1.5 cursor-pointer group"
+              onClick={() => navigate('/register')}
+              className="px-4 py-1.5 text-sm font-semibold bg-accent text-white rounded-full hover:bg-accent-hover transition-colors"
             >
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-[0_0_0_2px_#fff,0_1px_4px_rgba(0,0,0,0.08)] transition-transform duration-200 group-hover:scale-105"
-                style={{ backgroundColor: avatarColor }}
-              >
-                {initials}
-              </div>
-              <svg
-                width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="#6b6b6b" strokeWidth="2.5"
-                className={`hidden md:block transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
+              Register
             </button>
+          </div>
+        )}
 
-            {profileOpen && (
-              <div className="absolute right-0 top-12 w-48 bg-white rounded-xl border border-border shadow-float py-2 animate-fade-in z-50">
-                <div className="px-4 py-2 border-b border-border/50">
-                  <p className="text-sm font-medium text-ink">{user?.name || 'User'}</p>
-                  <p className="text-xs text-ink-faint">{user?.email || ''}</p>
+        {/* Authenticated */}
+        {isAuthenticated && (
+          <>
+            {!isCommunityActive && (
+              <button
+                onClick={() => navigate('/community?ask=true')}
+                className="hidden lg:flex items-center px-5 py-[7px] text-[0.82rem] font-semibold text-ink bg-transparent border-[1.5px] border-ink rounded-full cursor-pointer transition-all duration-300 ease-smooth tracking-[0.01em] leading-none hover:bg-ink hover:text-white hover:shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:-translate-y-px active:translate-y-0"
+              >
+                Ask Question
+              </button>
+            )}
+
+            <div className="hidden lg:block w-px h-6 bg-border mx-1" />
+
+            <NotificationBell />
+
+            {/* User Avatar + Dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen); }}
+                className="flex items-center gap-1.5 cursor-pointer group"
+              >
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-[0_0_0_2px_#fff,0_1px_4px_rgba(0,0,0,0.08)] transition-transform duration-200 group-hover:scale-105"
+                  style={{ backgroundColor: avatarColor }}
+                >
+                  {initials}
                 </div>
-                {(user?.role === 'admin' || user?.role === 'moderator') && (
+                <svg
+                  width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="#6b6b6b" strokeWidth="2.5"
+                  className={`hidden md:block transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
+                >
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 top-12 w-48 bg-white rounded-xl border border-border shadow-float py-2 animate-fade-in z-50">
+                  <div className="px-4 py-2 border-b border-border/50">
+                    <p className="text-sm font-medium text-ink">{user?.name || 'User'}</p>
+                    <p className="text-xs text-ink-faint">{user?.email || ''}</p>
+                  </div>
+                  {(user?.role === 'admin' || user?.role === 'moderator') && (
+                    <button
+                      onClick={() => { navigate('/admin'); setProfileOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-ink-soft hover:bg-bg hover:text-ink transition-colors border-b border-border/30"
+                    >
+                      Admin Dashboard
+                    </button>
+                  )}
                   <button
-                    onClick={() => { navigate('/admin'); setProfileOpen(false); }}
+                    onClick={() => { navigate('/account'); setProfileOpen(false); }}
                     className="w-full text-left px-4 py-2.5 text-sm text-ink-soft hover:bg-bg hover:text-ink transition-colors border-b border-border/30"
                   >
-                    Admin Dashboard
+                    Account
                   </button>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-ink-soft hover:bg-bg hover:text-ink transition-colors"
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
-          </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2.5 text-sm text-ink-soft hover:bg-bg hover:text-ink transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
-          {/* Mobile hamburger */}
-          <button
+        {/* Mobile hamburger */}
+        <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="lg:hidden flex w-9 h-9 items-center justify-center rounded-[10px] hover:bg-black/[0.04] transition-colors"
             aria-label="Toggle menu"
@@ -204,12 +243,20 @@ export default function Navbar() {
             </NavLink>
           ))}
           <div className="flex gap-2 mt-3">
-            {!isCommunityActive && (
+            {!isCommunityActive && isAuthenticated && (
               <button
                 onClick={() => { navigate('/community?ask=true'); setMobileOpen(false); }}
                 className="flex-1 py-2.5 px-4 text-sm font-semibold text-ink bg-transparent border-[1.5px] border-ink rounded-full cursor-pointer transition-all hover:bg-ink hover:text-white"
               >
                 Ask Question
+              </button>
+            )}
+            {!isAuthenticated && (
+              <button
+                onClick={() => { navigate('/login'); setMobileOpen(false); }}
+                className="flex-1 py-2.5 px-4 text-sm font-semibold text-ink bg-transparent border-[1.5px] border-ink rounded-full cursor-pointer transition-all hover:bg-ink hover:text-white"
+              >
+                Sign in
               </button>
             )}
           </div>

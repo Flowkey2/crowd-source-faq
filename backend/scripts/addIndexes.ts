@@ -7,7 +7,12 @@
  *  2. SearchLog query index — speeds up aggregation grouping
  *  3. FAQ category+status compound index — speeds up admin FAQ list
  *  4. CommunityPost status+createdAt index — speeds up community feed filtering
- *  5. User email index — unique enforcement
+ *  5. UnresolvedSearch status+createdAt index
+ *  6. UnresolvedSearch faqId index
+ *
+ * NOTE: User email unique index is intentionally NOT added here — User.ts schema
+ * field 'unique: true' on email already auto-creates it. Adding it in this script
+ * causes a duplicate schema index warning.
  */
 
 import 'dotenv/config';
@@ -23,55 +28,19 @@ async function migrate() {
   const db = mongoose.connection.db;
   if (!db) throw new Error('Database connection not established');
 
-  const indexes: Array<{
-    name: string;
-    coll: string;
-    key: Record<string, 1 | -1>;
-    options?: Record<string, unknown>;
-  }> = [
-    {
-      name: 'TTL 90-day expiry',
-      coll: 'yaksha_faq_searchlogs',
-      key: { createdAt: 1 },
-      options: { expireAfterSeconds: 60 * 60 * 24 * 90 },
-    },
-    {
-      name: 'query+createdAt',
-      coll: 'yaksha_faq_searchlogs',
-      key: { query: 1, createdAt: -1 },
-    },
-    {
-      name: 'category+status+createdAt',
-      coll: 'yaksha_faq_faqs',
-      key: { category: 1, status: 1, createdAt: -1 },
-    },
-    {
-      name: 'status+createdAt',
-      coll: 'yaksha_faq_communityposts',
-      key: { status: 1, createdAt: -1 },
-    },
-    {
-      name: 'email unique',
-      coll: 'yaksha_faq_users',
-      key: { email: 1 },
-      options: { unique: true, background: true },
-    },
-    {
-      name: 'status+createdAt (unresolved)',
-      coll: 'yaksha_faq_unresolved_searches',
-      key: { status: 1, createdAt: -1 },
-    },
-    {
-      name: 'faqId (unresolved)',
-      coll: 'yaksha_faq_unresolved_searches',
-      key: { faqId: 1 },
-    },
+  const indexes: { name: string; coll: string; key: Record<string, 1 | -1>; options?: Record<string, unknown> }[] = [
+    { name: 'TTL 90-day expiry',           coll: 'yaksha_faq_searchlogs',              key: { createdAt: 1 },                       options: { expireAfterSeconds: 60 * 60 * 24 * 90 } },
+    { name: 'query+createdAt',            coll: 'yaksha_faq_searchlogs',              key: { query: 1, createdAt: -1 } },
+    { name: 'category+status+createdAt',   coll: 'yaksha_faq_faqs',                   key: { category: 1, status: 1, createdAt: -1 } },
+    { name: 'status+createdAt',            coll: 'yaksha_faq_communityposts',          key: { status: 1, createdAt: -1 } },
+    { name: 'status+createdAt (unresolved)', coll: 'yaksha_faq_unresolved_searches',   key: { status: 1, createdAt: -1 } },
+    { name: 'faqId (unresolved)',          coll: 'yaksha_faq_unresolved_searches',     key: { faqId: 1 } },
   ];
 
   for (const idx of indexes) {
     console.log(`Creating index "${idx.name}" on ${idx.coll}...`);
     try {
-      await db.collection(idx.coll).createIndex(idx.key, idx.options as any);
+      await db.collection(idx.coll).createIndex(idx.key, idx.options);
       console.log('  ✓ Created');
     } catch (err: any) {
       if (err.code === 85 || err.code === 86) {

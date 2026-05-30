@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import CommunityPostCard from '../components/ui/CommunityPostCard';
@@ -43,6 +44,7 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [resolveLoading, setResolveLoading] = useState(false);
   const [expertHelpLoading, setExpertHelpLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isAnswered = post.status === 'answered';
   const upvoteCount = (post.upvotes?.length ?? 0);
@@ -90,7 +92,9 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
           : (prev.upvotes || []).filter((u) => (typeof u === 'object' ? (u as { _id?: string })._id : u)?.toString() !== currentUserId),
       }));
     } catch (e) {
-      console.error(e);
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Upvote failed. Please try again.';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 3000);
     } finally {
       setUpvoteLoading(false);
     }
@@ -105,7 +109,9 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
       setPost((prev) => ({ ...prev, comments: [...(prev.comments || []), res.data.comment] }));
       setCommentText('');
     } catch (e) {
-      console.error(e);
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Comment failed. Please try again.';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 3000);
     } finally {
       setCommentLoading(false);
     }
@@ -121,7 +127,9 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
       setShowResolveForm(false);
       setResolveText('');
     } catch (e) {
-      console.error(e);
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Could not mark as resolved. Please try again.';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 3000);
     } finally {
       setResolveLoading(false);
     }
@@ -148,6 +156,13 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
       className="m-auto w-full max-w-2xl rounded-2xl border border-border shadow-2xl bg-card p-0 backdrop:bg-ink/30 backdrop:backdrop-blur-sm"
       style={{ maxHeight: '90vh' }}
     >
+      {/* Action error banner */}
+      {actionError && (
+        <div className="mx-6 mt-4 px-4 py-2.5 bg-danger-light border border-danger/20 rounded-xl text-xs text-danger flex items-center justify-between gap-2">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-danger/60 hover:text-danger font-bold text-sm leading-none">✕</button>
+        </div>
+      )}
       <div className="flex flex-col overflow-hidden" style={{ maxHeight: '90vh' }}>
         <div className="flex items-start justify-between gap-3 p-6 pb-4 border-b border-border">
           <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -420,7 +435,7 @@ function PostDetailDialog({ post: initialPost, onClose, currentUserId, userRole 
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleComment(e);
+                    if (!commentLoading) handleComment(e as unknown as React.FormEvent);
                   }
                 }}
               />
@@ -450,13 +465,44 @@ interface CreatePostDialogProps {
 
 function CreatePostDialog({ onClose, onCreated }: CreatePostDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
+  const DRAFT_KEY = 'yaksha_post_draft';
+
+  // Restore draft from sessionStorage on mount
+  const [title, setTitle] = useState(() => {
+    try {
+      const draft = sessionStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        const { t } = JSON.parse(draft);
+        return t || '';
+      }
+    } catch {}
+    return '';
+  });
+  const [body, setBody] = useState(() => {
+    try {
+      const draft = sessionStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        const { b } = JSON.parse(draft);
+        return b || '';
+      }
+    } catch {}
+    return '';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [faqMatch, setFaqMatch] = useState<{ question: string } | null>(null);
   const [faqCheckLoading, setFaqCheckLoading] = useState(false);
   const faqCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Save draft on field changes
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: val, b: body })); } catch {}
+  };
+  const handleBodyChange = (val: string) => {
+    setBody(val);
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: title, b: val })); } catch {}
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -521,6 +567,8 @@ function CreatePostDialog({ onClose, onCreated }: CreatePostDialogProps) {
     setLoading(true);
     try {
       const res = await api.post<{ post: Post }>('/community', { title: title.trim(), body: body.trim() });
+      // Clear draft on success
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
       onCreated(res.data.post);
       dialogRef.current?.close();
     } catch (err) {
@@ -645,6 +693,7 @@ function CreatePostDialog({ onClose, onCreated }: CreatePostDialogProps) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CommunityPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -670,29 +719,49 @@ export default function CommunityPage() {
 
   const handleCloseThread = useCallback(() => {
     setSelectedPostId(null);
-    // Refresh the list to pick up any new comments/upvotes
-    fetchPosts(page, filter, sort, search);
-  }, [page, filter, sort, search]);
+    // Refresh current page to pick up any new comments/upvotes
+    fetchPosts(page);
+  }, [page, fetchPosts]);
 
   // If navigated here via ?ask=true (from navbar "Ask Question") or ?post=<id> (from search)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    // ?ask=true — guard auth, redirect if not logged in
     if (params.get('ask') === 'true') {
+      if (!user) {
+        window.history.replaceState({}, '', window.location.pathname);
+        navigate('/login?redirect=/community?ask=true');
+        return;
+      }
       setShowCreate(true);
-      // Clean the URL param so refresh doesn't re-trigger
       window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // ?post=<id> — open thread, fetch individually if not in cached list
     const postId = params.get('post');
     if (postId) {
-      // Find the post in the already-loaded posts or fetch it
       const found = posts.find((p) => p._id === postId);
       if (found) {
         setSelectedPostId(postId);
+      } else {
+        // Post not in list — fetch individually
+        api.get(`/community/${postId}`)
+          .then((res) => {
+            const post = res.data;
+            if (post && post._id) {
+              setSelectedPostId(postId);
+              // Prepend to posts so it's in cache
+              setPosts(prev => [post, ...prev]);
+            }
+          })
+          .catch(() => {
+            // Post not found or access denied — silently fail, don't open thread
+          });
       }
-      // Clean the URL param so refresh doesn't re-trigger
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [posts]);
+  }, [posts, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPosts = useCallback((pageNum = 1) => {
     if (pageNum === 1) setLoading(true);
@@ -746,8 +815,23 @@ export default function CommunityPage() {
     return () => clearTimeout(timer);
   }, [search, runSemanticSearch]);
 
+  // When filter or sort changes — refresh posts (if no search active) or re-filter existing results
   useEffect(() => {
-    if (search.trim()) return;
+    if (search.trim()) {
+      // Search is active — re-apply filter/sort client-side to existing searchResults
+      setSearchResults(prev => {
+        if (!prev.length) return prev;
+        let filtered = [...prev];
+        if (filter === 'answered') filtered = filtered.filter(p => p.status === 'answered');
+        else if (filter === 'unanswered') filtered = filtered.filter(p => p.status === 'unanswered');
+        if (sort === 'newest') filtered.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+        else if (sort === 'oldest') filtered.sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
+        else if (sort === 'popular') filtered.sort((a, b) => ((b.upvotes?.length ?? 0)) - ((a.upvotes?.length ?? 0)));
+        else if (sort === 'discussed') filtered.sort((a, b) => ((b.comments?.length ?? 0)) - ((a.comments?.length ?? 0)));
+        return filtered;
+      });
+      return;
+    }
     fetchPosts(1);
   }, [filter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -946,7 +1030,7 @@ export default function CommunityPage() {
         <div className="fixed inset-0 z-40 bg-bg overflow-y-auto">
           <ThreadDetail
             postId={selectedPostId}
-            onBack={handleCloseDetail}
+            onClose={handleCloseDetail}
           />
         </div>
       )}

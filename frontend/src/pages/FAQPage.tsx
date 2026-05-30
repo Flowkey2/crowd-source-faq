@@ -611,6 +611,7 @@ function ReportFAQButton({ item }: ReportFAQButtonProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || reason.trim().length < 10) return;
     setError('');
     setLoading(true);
     try {
@@ -986,12 +987,14 @@ export default function FAQPage() {
 
   useEffect(() => {
     // Check for pre-selected FAQ from HomePage search navigation
+    // Guard: only run once grouped data is actually available (race condition fix)
+    if (!grouped || Object.keys(grouped).length === 0) return;
+
     const highlightStr = sessionStorage.getItem('yaksha_faq_highlight');
     if (highlightStr) {
       try {
         const highlight = JSON.parse(highlightStr) as FAQItem;
         sessionStorage.removeItem('yaksha_faq_highlight');
-        // Find the category this FAQ belongs to and set it
         const category = highlight.category || '';
         if (category && grouped[category]) {
           const found = grouped[category].find((item) => item._id === highlight._id);
@@ -1164,8 +1167,14 @@ export default function FAQPage() {
         )}
 
         {error && !loading && (
-          <div className="rounded-2xl bg-danger-light border border-danger/15 p-4 text-sm text-danger">
-            {error}
+          <div className="rounded-2xl bg-danger-light border border-danger/15 p-6 text-center space-y-3">
+            <p className="text-sm text-danger font-medium">{error}</p>
+            <button
+              onClick={() => { setError(''); setLoading(true); api.get('/faq').then(res => { setGrouped(res.data.grouped || {}); setTotal(res.data.total || 0); }).catch((err: unknown) => { const m = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to load FAQs.'; setError(m); }).finally(() => setLoading(false)); }}
+              className="px-5 py-2 text-sm font-medium bg-danger text-white rounded-full hover:bg-danger/90 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         )}
 

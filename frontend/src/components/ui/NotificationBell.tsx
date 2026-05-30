@@ -96,6 +96,15 @@ export default function NotificationBell() {
     }
   };
 
+  const handleNotificationClick = (notif: { _id: string; read: boolean; link: string }) => {
+    if (!notif.read) markAsRead(notif._id);
+    setOpen(false);
+    // Navigate to the notification's link (e.g. /community?post=<id> or /faq/<id>)
+    if (notif.link && notif.link !== '#') {
+      navigate(notif.link);
+    }
+  };
+
   const handleMarkOneTeaRead = async (id: string) => {
     try {
       await api.patch(`/notifications/tea/${id}/read`);
@@ -108,11 +117,18 @@ export default function NotificationBell() {
 
   const handleTeaClick = (drop: TeaDrop) => {
     if (!drop.read) handleMarkOneTeaRead(drop._id);
-    window.location.href = `/faq?q=${encodeURIComponent(drop.faqQuestion)}`;
     setOpen(false);
+    // Navigate to the FAQ page with the question as search
+    navigate(`/faq?q=${encodeURIComponent(drop.faqQuestion)}`);
   };
 
   const totalUnread = unreadCount + teaUnread;
+
+  const notifIcon = (type: string) =>
+    ({ comment_replied: '💬', post_resolved: '✅', faq_match_found: '🔍', mention: '@', expert_request: '👑' } as Record<string, string>)[type] ?? '🔔';
+
+  const notifLabel = (type: string) =>
+    ({ comment_replied: 'Comment', post_resolved: 'Resolved', faq_match_found: 'FAQ', mention: 'Mention', expert_request: 'Expert' } as Record<string, string>)[type] ?? 'Notice';
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -185,28 +201,41 @@ export default function NotificationBell() {
                     <p className="text-xs text-ink-faint mt-1">We&apos;ll notify you when your questions get answered</p>
                   </div>
                 ) : (
-                  notifications.slice(0, 10).map(notif => (
-                    <button
-                      key={notif._id}
-                      onClick={() => { if (!notif.read) markAsRead(notif._id); setOpen(false); }}
-                      className={`w-full text-left px-4 py-3 border-b border-border/30 hover:bg-bg transition-colors ${!notif.read ? 'bg-accent-light/20' : ''}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {!notif.read && <span className="w-2 h-2 rounded-full bg-accent mt-1.5 flex-shrink-0" />}
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium leading-snug ${!notif.read ? 'text-ink' : 'text-ink-soft'}`}>
-                            {notif.title}
-                          </p>
-                          <p className="text-xs text-ink-faint mt-0.5 line-clamp-2">{notif.message}</p>
-                          <p className="text-xs text-ink-faint/60 mt-1">
-                            {new Date(notif.createdAt).toLocaleDateString('en-IN', {
-                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                            })}
-                          </p>
+                  <div>
+                    {notifications.slice(0, 10).map(notif => (
+                      <button
+                        key={notif._id}
+                        onClick={() => handleNotificationClick(notif)}
+                        className={`w-full text-left px-4 py-3 border-b border-border/30 hover:bg-bg transition-colors ${!notif.read ? 'bg-accent-light/20' : ''}`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs mt-0.5 ${!notif.read ? 'bg-accent text-white' : 'bg-mist text-ink-faint'}`}>
+                            {notifIcon(notif.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <p className={`text-sm font-medium leading-snug ${!notif.read ? 'text-ink' : 'text-ink-soft'}`}>
+                                {notif.title}
+                              </p>
+                              {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
+                            </div>
+                            <p className="text-xs text-ink-faint mt-0.5 line-clamp-2">{notif.message}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-ink-faint/60">
+                                {new Date(notif.createdAt).toLocaleDateString('en-IN', {
+                                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                                })}
+                              </span>
+                              <span className="text-[10px] font-medium text-accent/70">{notifLabel(notif.type)}</span>
+                              {notif.link && notif.link !== '#' && (
+                                <span className="ml-auto text-[10px] text-ink-faint/40">→</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </>

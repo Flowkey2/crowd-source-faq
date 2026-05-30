@@ -528,3 +528,36 @@ export const verifyComment = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Server error', error: (error as Error).message });
   }
 };
+
+// POST /api/community/:id/report — Report a community post
+export const reportPost = async (req: Request<{ id: string }, {}, { reason: string }>, res: Response): Promise<void> => {
+  try {
+    const { reason } = req.body;
+    if (!reason || !reason.trim()) {
+      res.status(400).json({ message: 'Reason is required.' });
+      return;
+    }
+
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) {
+      res.status(404).json({ message: 'Post not found.' });
+      return;
+    }
+
+    // Prevent duplicate reports by the same user
+    const alreadyReported = post.reports.some(
+      (r) => r.reportedBy.toString() === req.user!._id.toString()
+    );
+    if (alreadyReported) {
+      res.status(409).json({ message: 'You have already reported this post.' });
+      return;
+    }
+
+    post.reports.push({ reportedBy: req.user!._id, reason: reason.trim() });
+    await post.save();
+
+    res.json({ message: 'Report submitted. Thank you.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: (error as Error).message });
+  }
+};

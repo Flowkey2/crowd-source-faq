@@ -37,6 +37,7 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(function Se
   const [internalQuery, setInternalQuery] = useState<string>('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const isControlled = value !== undefined;
   const query = isControlled ? (value ?? '') : internalQuery;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,11 +110,13 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(function Se
   const handleSuggestionClick = async (faqId: string) => {
     setShowSuggestions(false);
     setSuggestions([]);
-    // Fetch the FAQ item and store in sessionStorage so the FAQ page can highlight it
+    setSuggestionError(null);
     try {
       const res = await api.get<{ _id: string; question: string; answer: string; category: string }>(`/faq/${faqId}`);
       sessionStorage.setItem('yaksha_faq_highlight', JSON.stringify(res.data));
-    } catch {}
+    } catch {
+      setSuggestionError('Could not load FAQ. Navigating anyway.');
+    }
     navigate(`/faq`);
   };
 
@@ -180,6 +183,12 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(function Se
                 <span className="ml-auto text-xs text-ink-faint shrink-0">{s.category}</span>
               </button>
             ))}
+          </div>
+        )}
+        {/* Suggestion click error */}
+        {suggestionError && (
+          <div className="absolute top-full left-0 right-0 mt-2 px-4 py-2 bg-danger-light border border-danger/20 rounded-xl text-xs text-danger">
+            {suggestionError}
           </div>
         )}
       </div>

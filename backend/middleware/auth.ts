@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import User, { type IUser, type UserRole } from '../models/User.js';
-import '../types/express.js'; // picks up the global Request interface
 
 // Express middleware to protect routes requiring authentication
 export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -12,7 +11,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized. No token provided.' });
+    res.status(401).json({ message: 'Not authorized. Token missing.' });
     return;
   }
 
@@ -21,26 +20,22 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
-      res.status(401).json({ message: 'User not found.' });
+      res.status(401).json({ message: 'Not authorized. User not found.' });
       return;
     }
 
-    req.user = user;
+    req.user = user as IUser;
     next();
   } catch {
-    res.status(401).json({ message: 'Not authorized. Invalid token.' });
+    res.status(401).json({ message: 'Not authorized. Token invalid.' });
   }
 };
 
-// Express middleware to restrict access to specific roles (RBAC)
-export const authorize = (...roles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({ message: 'Not authorized. No user context.' });
-      return;
-    }
-    if (!roles.includes(req.user.role)) {
-      res.status(403).json({ message: `Forbidden. Role '${req.user.role}' is not authorized.` });
+export const authorize = (...allowedRoles: UserRole[]) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const role = (req.user as IUser)?.role as UserRole | undefined;
+    if (!role || !allowedRoles.includes(role)) {
+      next(new Error('Insufficient permissions.'));
       return;
     }
     next();

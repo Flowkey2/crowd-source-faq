@@ -25,10 +25,14 @@ export default function LoginPage() {
       return;
     }
 
+    // Preserve intended destination for redirect after login
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') || '/';
+
     setLoading(true);
     try {
       await login(form.email.trim(), form.password);
-      navigate('/', { replace: true });
+      navigate(redirect, { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Login failed. Please try again.');
@@ -63,6 +67,7 @@ export default function LoginPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="you@example.com"
+              disabled={loading}
             />
 
             <Input
@@ -74,6 +79,7 @@ export default function LoginPage() {
               value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
+              disabled={loading}
             />
 
             {error && (

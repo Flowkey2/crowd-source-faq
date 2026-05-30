@@ -8,7 +8,7 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +20,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!form.name || !form.email || !form.password) {
+    if (!form.name?.trim() || !form.email || !form.password) {
       setError('Please fill out all fields.');
       return;
     }
@@ -30,10 +30,19 @@ export default function RegisterPage() {
       return;
     }
 
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    // Preserve intended destination for redirect after registration
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') || '/';
+
     setLoading(true);
     try {
       await register(form.name.trim(), form.email.trim(), form.password);
-      navigate('/', { replace: true });
+      navigate(redirect, { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Registration failed. Please try again.');
@@ -68,6 +77,7 @@ export default function RegisterPage() {
               value={form.name}
               onChange={handleChange}
               placeholder="John Doe"
+              disabled={loading}
             />
 
             <Input
@@ -79,6 +89,7 @@ export default function RegisterPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="you@example.com"
+              disabled={loading}
             />
 
             <Input
@@ -90,6 +101,20 @@ export default function RegisterPage() {
               value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
+              disabled={loading}
+            />
+            <p className="text-[10px] text-ink-faint -mt-2">Minimum 6 characters</p>
+
+            <Input
+              id="register-confirm"
+              name="confirmPassword"
+              type="password"
+              label="Confirm Password"
+              autoComplete="new-password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              placeholder="••••••••"
+              disabled={loading}
             />
 
             {error && (

@@ -3,9 +3,10 @@ import api from '../utils/api';
 
 export interface Notification {
   _id: string;
-  type: 'post_resolved' | 'comment_replied' | 'faq_match_found' | 'mention';
+  type: 'post_resolved' | 'comment_replied' | 'faq_match_found' | 'mention' | 'expert_request';
   title: string;
   message: string;
+  /** URL to navigate to when clicked, e.g. `/community?post=<id>` or `/faq/<id>` */
   link: string;
   read: boolean;
   createdAt: string;
