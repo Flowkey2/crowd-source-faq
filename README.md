@@ -88,20 +88,22 @@ Full reference in [`docs/`](docs/README.md):
 
 ## Key Features
 
-Two flagship capabilities define this platform:
+Four flagship capabilities define this platform:
 
 - **Zoom transcript ingestion with per-user OAuth** — Each user connects their own Zoom account via OAuth. Webhook-fired downloads parse VTT transcripts, extract Q&A pairs via AI, and dual-publish: `ZoomInsight` (admin-reviewed) and `TranscriptKnowledge` (auto-approved, immediately vector-searchable). Includes retry + dead-letter queue for failed meetings and admin backfill for historical meetings. See [docs/PIPELINES.md#4-zoom-ingestion-pipeline](docs/PIPELINES.md).
 
 - **AI auto-answer pipeline for community posts** — A scheduler (every 24h) finds unanswered posts, searches the knowledge base, and either auto-posts an answer (≥0.85 confidence), queues for human review (0.60–0.84), or escalates (<0.60 or sensitive topics). Three AI providers compete: per-pipeline configurable. See [docs/PIPELINES.md#1-auto-answer-pipeline](docs/PIPELINES.md).
 
+- **FAQ audit pipeline** — re-evaluates approved FAQs against live knowledge every 6 hours, flags drift/contradictions/stale
+
+- **Soft-delete with anonymization** — user deletion preserves referential integrity and audit logs
+
 Other features:
 
 - **Semantic hybrid search** — vector search (768-dim) + keyword search merged via Reciprocal Rank Fusion
-- **FAQ audit pipeline** — re-evaluates approved FAQs against live knowledge every 6 hours, flags drift/contradictions/stale
 - **Community board** — posts, comments, threaded replies, upvotes, bookmarks, expert verification
 - **Reputation system** — points for accepted answers, badges, leaderboard
 - **SpillTheTea notifications** — event-driven notification system
-- **Soft-delete with anonymization** — user deletion preserves referential integrity and audit logs
 
 ---
 
