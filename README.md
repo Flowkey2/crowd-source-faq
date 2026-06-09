@@ -88,16 +88,62 @@ Full reference in [`docs/`](docs/README.md):
 
 ## Key Features
 
+Two flagship capabilities define this platform:
+
+- **Zoom transcript ingestion with per-user OAuth** — Each user connects their own Zoom account via OAuth. Webhook-fired downloads parse VTT transcripts, extract Q&A pairs via AI, and dual-publish: `ZoomInsight` (admin-reviewed) and `TranscriptKnowledge` (auto-approved, immediately vector-searchable). Includes retry + dead-letter queue for failed meetings and admin backfill for historical meetings. See [docs/PIPELINES.md#4-zoom-ingestion-pipeline](docs/PIPELINES.md).
+
+- **AI auto-answer pipeline for community posts** — A scheduler (every 24h) finds unanswered posts, searches the knowledge base, and either auto-posts an answer (≥0.85 confidence), queues for human review (0.60–0.84), or escalates (<0.60 or sensitive topics). Three AI providers compete: per-pipeline configurable. See [docs/PIPELINES.md#1-auto-answer-pipeline](docs/PIPELINES.md).
+
+Other features:
+
 - **Semantic hybrid search** — vector search (768-dim) + keyword search merged via Reciprocal Rank Fusion
-- **AI auto-answer pipeline** — automatically answers community posts using FAQ + transcript knowledge base
-- **FAQ audit pipeline** — re-evaluates approved FAQs against live knowledge every 6 hours
-- **Zoom ingestion** — per-user OAuth, webhook triggers, automatic transcript parsing and Q&A extraction
-- **Retry + dead-letter queue** — failed Zoom meetings retried with exponential backoff, capped at 3 attempts
+- **FAQ audit pipeline** — re-evaluates approved FAQs against live knowledge every 6 hours, flags drift/contradictions/stale
 - **Community board** — posts, comments, threaded replies, upvotes, bookmarks, expert verification
 - **Reputation system** — points for accepted answers, badges, leaderboard
 - **SpillTheTea notifications** — event-driven notification system
-- **Admin dashboard** — FAQ review, audit results, auto-answer queue, Zoom insights, user management, moderation queue
 - **Soft-delete with anonymization** — user deletion preserves referential integrity and audit logs
+
+---
+
+## Admin Dashboard
+
+The admin panel at `/admin` (mounted at `/api/admin/*`) provides full operational visibility and control:
+
+### Telemetry & Analytics
+- **Live stats** — `/api/admin/stats`: counts of users, FAQs, community posts, comments, recent activity
+- **FAQ growth chart** — `/api/admin/faq-growth`: time-series of FAQ creation
+- **Top categories** — `/api/admin/top-categories`: most-viewed FAQ categories
+- **Search insights** — `/api/admin/search-insights`: aggregated search analytics (popular queries, no-result queries, success rate)
+- **User activity chart** — `/api/admin/user-activity-chart`: daily active users, signups, post activity
+- **Activity feed** — `/api/admin/activity-feed`: chronological admin-event log
+- **Failed-query analytics** — `/api/analytics/failed-queries`: top 30 zero-result searches in the last 7 days (catches knowledge-base gaps)
+- **Unresolved search tracker** — `/api/analytics/`: queries with no FAQ match (admin can promote them to FAQs)
+
+### Operational Pages
+- **AdminDashboard** — overview cards with animated count-up + trend badges
+- **AdminFAQs** — full FAQ CRUD, review queue for flagged content
+- **FaqReview** — peer-vote freshness + AI-audit flagged FAQs
+- **AdminFAQAudit** — AI audit results (correct / drift_detected / contradiction / stale)
+- **AdminAutoAnswerQueue** — review queue for AI-suggested answers
+- **AdminCommunity** — post management, comments moderation
+- **AdminUsers** — user listing, role management, ban / suspend / warn actions
+- **AdminModeration** — moderation logs, ban queue
+- **AdminZoomMeetings** — Zoom meeting records, retry/DLQ management, backfill
+- **AdminZoomInsights** — review AI-extracted Q&A from transcripts, convert to FAQ
+- **AdminLeaderboard** — reputation leaderboard with badge progress
+- **AdminUnresolvedSearch** — track and resolve search queries with no FAQ match
+- **AdminAISettings** — per-pipeline AI provider/model configuration
+- **AdminSettings** — app-wide settings, 2FA setup
+- **AdminLogin** — dedicated admin login with 2FA enforcement
+
+### Moderation
+- **Moderation logs** — every ban, suspend, warn, soft-delete recorded with admin id, reason, timestamp
+- **Reputation logs** — every point change (+2 post upvote, +5 comment accepted) recorded for audit
+
+### AI Pipeline Visibility
+- **PipelineResult collection** — unified log of every auto-answer and audit outcome (30-day TTL)
+- **Zoom health** — `/api/zoom/health`: OAuth circuit state, API circuit state, cache hit rate, failing-meetings count, dead-letter count, pending-retry count
+- **Prometheus metrics** — `/api/metrics`: search latency, cache hits, RAG duration, queue depth
 
 ---
 
