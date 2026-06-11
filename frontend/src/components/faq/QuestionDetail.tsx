@@ -13,6 +13,7 @@ interface QuestionDetailProps {
 
 export default function QuestionDetail({ item, relatedItems, onBack, onSelectRelated, backLabel }: QuestionDetailProps) {
   const title = getQuestionTitle(item);
+  const prefix = item.questionNumber ? `${item.questionNumber}. ` : '';
   const answer = getAnswerText(item);
   const metaDate = formatDate(item?.updatedAt || item?.createdAt);
   const sourceLabel = item?.source ? (item.source === 'faq' ? 'FAQ' : 'Community') : '';
@@ -28,7 +29,7 @@ export default function QuestionDetail({ item, relatedItems, onBack, onSelectRel
             <span className="w-8 h-8 rounded-xl bg-mist flex items-center justify-center text-ink-faint">
               {getCategoryIcon(item?.category || '')}
             </span>
-            <span>{formatCategoryName(item?.category || 'General')}</span>
+            <span>{item?.categoryNumber ? `${item.categoryNumber}. ` : ''}{formatCategoryName(item?.category || 'General')}</span>
           </div>
         </div>
 
@@ -44,7 +45,7 @@ export default function QuestionDetail({ item, relatedItems, onBack, onSelectRel
                 onClick={() => onSelectRelated(rel)}
                 className="w-full text-left text-xs text-ink hover:text-accent transition-colors line-clamp-2"
               >
-                {getQuestionTitle(rel)}
+                {rel.questionNumber ? `${rel.questionNumber}. ` : ''}{getQuestionTitle(rel)}
               </button>
             ))}
           </div>
@@ -82,6 +83,7 @@ export default function QuestionDetail({ item, relatedItems, onBack, onSelectRel
         </div>
 
         <h2 className="mt-4 text-xl font-semibold text-ink leading-snug">
+          <span className="text-ink-faint mr-2 tabular-nums">{prefix}</span>
           {title}
           {trustLevel && <TrustBadge level={trustLevel} />}
         </h2>
@@ -111,7 +113,7 @@ export default function QuestionDetail({ item, relatedItems, onBack, onSelectRel
                   onClick={() => onSelectRelated(rel)}
                   className="px-3 py-1.5 rounded-full border border-border/70 bg-card text-xs text-ink hover:border-accent/50 hover:text-accent transition-colors"
                 >
-                  {getQuestionTitle(rel)}
+                  {rel.questionNumber ? `${rel.questionNumber}. ` : ''}{getQuestionTitle(rel)}
                 </button>
               ))}
             </div>

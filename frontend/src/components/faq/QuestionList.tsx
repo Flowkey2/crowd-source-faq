@@ -28,6 +28,7 @@ interface QuestionItemProps {
 
 export function QuestionItem({ item, isExpanded, onToggle }: QuestionItemProps) {
   const title = getQuestionTitle(item);
+  const prefix = item.questionNumber ? `${item.questionNumber}. ` : '';
   const answer = getAnswerText(item);
   const metaDate = formatDate(item?.updatedAt || item?.createdAt);
   const sourceLabel = item?.source ? (item.source === 'faq' ? 'FAQ' : 'Community') : '';
@@ -45,6 +46,7 @@ export function QuestionItem({ item, isExpanded, onToggle }: QuestionItemProps) 
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
       >
         <span className="faq-item__question-text">
+          <span className="text-ink-faint mr-1 tabular-nums">{prefix}</span>
           {title}
           <TrustBadge level={item.trustLevel} />
           <SourceBadge sourceType={item.sourceType} />

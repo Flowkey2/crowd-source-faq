@@ -16,6 +16,7 @@ import {
   getCategoryTone,
   IconGrid,
   getQuestionTitle,
+  applyQuestionNumbers,
 } from '../components/faq/faqUtils';
 import SearchDropdown from '../components/faq/SearchDropdown';
 import SearchFeedback from '../components/faq/SearchFeedback';
@@ -190,7 +191,7 @@ export default function FAQPage() {
 
     api.get('/faq', { signal })
       .then((res) => {
-        setGrouped(res.data.grouped || {});
+        setGrouped(applyQuestionNumbers(res.data.grouped || {}));
         setTotal(res.data.total || 0);
       })
       .catch((err: unknown) => {
@@ -314,7 +315,7 @@ export default function FAQPage() {
     setLoading(true);
     api.get('/faq')
       .then((res) => {
-        setGrouped(res.data.grouped || {});
+        setGrouped(applyQuestionNumbers(res.data.grouped || {}));
         setTotal(res.data.total || 0);
       })
       .catch((err: unknown) => {
@@ -352,7 +353,11 @@ export default function FAQPage() {
     setError('');
     try {
       const res = await api.post('/search', { query: queryStr });
-      setSearchResults(res.data.results || []);
+      const enrichedResults = (res.data.results || []).map((r: FAQItem) => {
+        const match = flatQuestions.find(f => f._id === r._id);
+        return match ? { ...r, questionNumber: match.questionNumber } : r;
+      });
+      setSearchResults(enrichedResults);
     } catch {
       setSearchResults([]);
       setError('Search failed. Please try again.');
@@ -564,7 +569,7 @@ export default function FAQPage() {
                 <span className="w-9 h-9 rounded-xl bg-mist flex items-center justify-center text-ink-faint">
                   {getCategoryIcon(activeCategory)}
                 </span>
-                {formatCategoryName(activeCategory)}
+                {activeCategoryItems[0]?.categoryNumber ? `${activeCategoryItems[0].categoryNumber}. ` : ''}{formatCategoryName(activeCategory)}
               </h2>
               {activeCategoryMeta && (
                 <p className="mt-2 text-sm text-ink-soft max-w-2xl">

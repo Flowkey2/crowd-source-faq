@@ -1,5 +1,5 @@
 import React from 'react';
-import { getCategoryIcon, formatCategoryName, getQuestionTitle } from './faqUtils';
+import { getCategoryIcon, formatCategoryName, getQuestionTitle, getCategoryIndex } from './faqUtils';
 import type { FAQItem } from './faqUtils';
 
 interface CategoryCardProps {
@@ -29,6 +29,8 @@ interface CategoryCardProps {
  */
 export default function CategoryCard({ name, count, items, onSelect }: CategoryCardProps) {
   const topTwo = items.slice(0, 2);
+  const categoryNumber = items[0]?.categoryNumber;
+  const catPrefix = categoryNumber ? `${categoryNumber}.` : '';
 
   return (
     <button
@@ -48,7 +50,7 @@ export default function CategoryCard({ name, count, items, onSelect }: CategoryC
 
       {/* Title */}
       <h3 className="text-base font-semibold text-ink leading-snug mb-3.5 line-clamp-2">
-        {formatCategoryName(name)}
+        {categoryNumber ? `${categoryNumber}. ` : ''}{formatCategoryName(name)}
       </h3>
 
       {/* Top questions — numbered list of the first 2 FAQs in this category */}
@@ -63,7 +65,7 @@ export default function CategoryCard({ name, count, items, onSelect }: CategoryC
                 key={q._id}
                 className="text-xs text-ink-soft flex gap-1.5 leading-snug"
               >
-                <span className="text-ink-faint shrink-0 tabular-nums">{i + 1}.</span>
+                <span className="text-ink-faint shrink-0 tabular-nums">{catPrefix}{i + 1}.</span>
                 <span className="truncate">{getQuestionTitle(q)}</span>
               </li>
             ))}

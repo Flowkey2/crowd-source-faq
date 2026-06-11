@@ -11,6 +11,8 @@ export interface FAQItem {
   categoryDescription?: string;
   description?: string;
   summary?: string;
+  categoryNumber?: number;
+  questionNumber?: string;
   source?: 'faq' | 'community';
   trustLevel?: string;
   sourceType?: string;
@@ -274,6 +276,37 @@ export const getCategoryDescription = (items: FAQItem[] = []): string => {
     || items[0]?.summary
     || '';
   return typeof candidate === 'string' ? candidate : '';
+};
+
+export const getCategoryIndex = (name: string = ''): string => {
+  const match = name.match(/^\s*(\d+)/);
+  return match ? match[1] : '';
+};
+
+export const applyQuestionNumbers = (grouped: Record<string, FAQItem[]>): Record<string, FAQItem[]> => {
+  const result: Record<string, FAQItem[]> = {};
+  
+  // Sort category names to determine their 1, 2, 3... index
+  const sortedCategories = Object.keys(grouped).sort((a, b) => {
+    const an = Number(a.match(/^\s*(\d+)/)?.[1] ?? '0');
+    const bn = Number(b.match(/^\s*(\d+)/)?.[1] ?? '0');
+    if (an !== bn) return an - bn;
+    return a.localeCompare(b);
+  });
+
+  sortedCategories.forEach((catName, catIndex) => {
+    const items = grouped[catName];
+    // Start index from 1
+    const categoryNumber = catIndex + 1;
+    
+    result[catName] = items.map((item, idx) => ({
+      ...item,
+      categoryNumber: categoryNumber,
+      questionNumber: `${categoryNumber}.${idx + 1}`,
+    }));
+  });
+  
+  return result;
 };
 
 export const formatCategoryName = (name: string = ''): string => (
