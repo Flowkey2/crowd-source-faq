@@ -39,6 +39,7 @@ import { addDocumentJob, isDocumentQueueEnabled } from '../utils/jobs/documentQu
 import { runPromotePopularDocumentInsights } from '../controllers/documentPromotionController.js';
 import { createIdentityLimiter } from '../utils/auth/rateLimit.js';
 import { mimeToFileType, type DocumentFileType } from '../utils/documentExtractor.js';
+import { assertCanCreateContent } from '../utils/banUtils.js';
 import { z } from 'zod';
 
 // ─── Multer ───────────────────────────────────────────────────────────────────
@@ -103,6 +104,8 @@ export async function uploadDocument(req: Request, res: Response): Promise<void>
   }
   const userId = getAuthedUserId(req);
   if (!userId) { res.status(401).json({ message: 'Authentication required.' }); return; }
+  // v1.66 — Golden-ban gate. 72h ban blocks document uploads.
+  if (!assertCanCreateContent(req.user as { goldenBannedUntil: Date | null }, res)) return;
   if (!req.file) { res.status(400).json({ message: 'No file uploaded. Use multipart/form-data with field name "file".' }); return; }
 
   const fileType: DocumentFileType | null = mimeToFileType(req.file.mimetype);

@@ -22,10 +22,13 @@ import { autoAwardBadges } from './reputationController.js';
 import { sanitizeHtml } from '../utils/http/sanitize.js';
 import { logger } from '../utils/http/logger.js';
 import { checkDuplicate } from './postDuplicateController.js';
+import { assertCanCreateContent } from '../utils/banUtils.js';
 
 // POST /api/community — Create a new post (protected)
 export const createPost = async (req: Request, res: Response): Promise<void> => {
   if (!req.user) { res.status(401).json({ message: 'Not authorized' }); return; }
+  // v1.66 — Golden-ban gate. 72h ban blocks new posts (questions, answers).
+  if (!assertCanCreateContent(req.user, res)) return;
   try {
     const { title, body, tags, attachments } = req.body as {
       title?: string;

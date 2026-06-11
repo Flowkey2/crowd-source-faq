@@ -8,6 +8,7 @@ import { sanitizeHtml } from '../utils/http/sanitize.js';
 import { createTeaDrop } from './teaNotificationController.js';
 import { dispatchNotification } from '../utils/http/notificationDispatcher.js';
 import { logger } from '../utils/http/logger.js';
+import { assertCanCreateContent } from '../utils/banUtils.js';
 
 // Extend Express Request to include user (same pattern as auth middleware)
 declare global {
@@ -53,6 +54,8 @@ export const getAnswersList = async (req: Request, res: Response): Promise<void>
 // Query param: ?parentId=<commentId> to reply to a specific comment
 export const addComment = async (req: Request, res: Response): Promise<void> => {
   if (!req.user) { res.status(401).json({ message: "Not authorized" }); return; }
+  // v1.66 — Golden-ban gate. 72h ban blocks new comments.
+  if (!assertCanCreateContent(req.user, res)) return;
   try {
     const { body } = req.body as { body?: string };
     const { parentId } = req.query as { parentId?: string };

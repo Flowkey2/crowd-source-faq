@@ -21,6 +21,7 @@ import SupportRequest, {
 } from '../models/SupportRequest.js';
 import SupportCategory, { type IContextField } from '../models/SupportCategory.js';
 import { logger } from '../utils/http/logger.js';
+import { assertCanCreateContent } from '../utils/banUtils.js';
 import {
   VALID_STATUSES,
   getAuthedUserId,
@@ -108,6 +109,10 @@ export async function createSupportRequest(req: Request, res: Response): Promise
   if (!(await requireFeatureOn(req, res))) return;
   const userId = getAuthedUserId(req);
   if (!userId) { res.status(401).json({ message: 'Authentication required.' }); return; }
+  // v1.66 — Golden-ban gate. A user under a 72h ban cannot raise
+  // support tickets (or Golden tickets) even though they can still
+  // log in and browse. The check is `goldenBannedUntil > now`.
+  if (!assertCanCreateContent(req.user as { goldenBannedUntil: Date | null }, res)) return;
 
   // v1.65 — Golden rejection cooldown gate. Cheap, one indexed read,
   // no side effects. Only fires for Golden conversion attempts (the
@@ -381,10 +386,18 @@ export async function listSupportRequests(req: Request, res: Response): Promise<
     // tickets anyway because the `userId` filter is already in
     // place, and the compound index `{ userId, isGolden, createdAt }`
     // keeps this fast. Accepts 'true' / 'false' / '1' / '0'.
+    // v1.66 — Golden tickets now live in /api/admin/golden-tickets
+    // (their own section). Default to hiding them from the Support
+    // inbox unless the admin explicitly opts in via isGolden=true.
     if (isAdmin && (isGolden === 'true' || isGolden === '1')) {
       filter.isGolden = true;
     } else if (isAdmin && (isGolden === 'false' || isGolden === '0')) {
       filter.isGolden = false;
+    } else if (isAdmin) {
+      // No explicit filter from admin → exclude Golden by default.
+      // Students still see all of their own (they only have their
+      // userId in the filter and might be a Golden ticket owner).
+      filter.isGolden = { $ne: true };
     }
     if (isAdmin && q) {
       const regex = new RegExp(escapeRegex(q).slice(0, 120), 'i');

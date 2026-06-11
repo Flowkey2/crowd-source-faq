@@ -24,6 +24,7 @@ import Notification from '../models/Notification.js';
 import { logAction } from './adminController.js';
 import { escalationsTotal } from '../utils/http/metrics.js';
 import { logger } from '../utils/http/logger.js';
+import { clearExpiredGoldenBans } from './goldenTicketAdminController.js';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 // Threshold in days after which an unanswered post is auto-escalated.
@@ -60,6 +61,12 @@ export function startEscalationScheduler(): void {
     });
     runTimeTrialCheck().catch((err) => {
       logger.error(`[time-trial] Scheduler error: ${(err as Error).message}`);
+    });
+    // v1.66 — Clear expired Golden Ticket bans so the DB doesn't
+    // accumulate stale `goldenBannedUntil` values. The auth check
+    // is `goldenBannedUntil > now` so this is just bookkeeping.
+    clearExpiredGoldenBans().catch((err) => {
+      logger.error(`[goldenTicketAdmin] clearExpiredGoldenBans error: ${(err as Error).message}`);
     });
   }, ms);
 
