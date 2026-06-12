@@ -5,8 +5,15 @@
  * (768-dim, 110M params) → mixedbread-ai/mxbai-embed-large-v1
  * (1024-dim, 335M params). MTEB score 64.68 vs the old model's
  * lower MTEB; should fix the "FAQ search returns nothing useful"
- * complaint. Backed by @huggingface/transformers (the
- * maintained successor to @xenova/transformers).
+ * complaint.
+ *
+ * v1.68 (HF API mode) — When HUGGINGFACE_API_KEY is set, route
+ * all embedding calls through the HF Inference API at
+ * https://api-inference.huggingface.co/models/<model>.
+ * No 1.2GB ONNX download, no in-process model load, just a
+ * network call. When unset, fall back to running the model
+ * in-process via @huggingface/transformers (the maintained
+ * successor to @xenova/transformers).
  *
  * Important: mxbai wants a retrieval-specific prompt for QUERIES
  * ("Represent this sentence for searching relevant passages: ").
@@ -24,23 +31,101 @@
  *      search index (recreate the index — Atlas doesn't allow
  *      in-place dim change)
  */
-import { pipeline, FeatureExtractionPipeline, env } from '@huggingface/transformers';
+import {
+  pipeline,
+  FeatureExtractionPipeline,
+  env as transformersEnv,
+} from '@huggingface/transformers';
 
 export const MODEL_SLUG = 'mixedbread-ai/mxbai-embed-large-v1';
 export const EMBEDDING_DIM = 1024;
 /** Retrieval prompt prepended to search queries. Don't add to documents. */
 export const QUERY_PROMPT = 'Represent this sentence for searching relevant passages: ';
 
-// Cache pipeline across calls. Lazy-loaded on first use.
+// ── HF Inference API path ────────────────────────────────────────────
+const HF_API_BASE = 'https://api-inference.huggingface.co/models';
+
+function getHfApiKey(): string | null {
+  return (process.env.HUGGINGFACE_API_KEY ?? '').trim() || null;
+}
+
+function shouldUseHfApi(): boolean {
+  return getHfApiKey() !== null;
+}
+
+/**
+ * Call the HF Inference API for a single text. Returns the
+ * embedding vector. The API may return either:
+ *   - pooled 2D:  [[float, float, ...]]   (most common for
+ *                                          sentence-transformers)
+ *   - hidden 3D: [[[float, ...], [float, ...], ...]]   (raw
+ *                                          last_hidden_state;
+ *                                          needs CLS pooling)
+ *
+ * We detect the shape and either normalize the pooled result
+ * or do CLS pooling + normalize the hidden states.
+ */
+async function callHfApiEmbedding(text: string): Promise<number[]> {
+  const apiKey = getHfApiKey();
+  if (!apiKey) {
+    throw new Error('HUGGINGFACE_API_KEY is not set');
+  }
+  const url = `${HF_API_BASE}/${MODEL_SLUG}`;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 30_000);  // 30s timeout
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: text,
+        options: { wait_for_model: true, use_cache: true },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HF Inference API ${res.status}: ${errText}`);
+    }
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error(`HF Inference API returned unexpected shape: ${JSON.stringify(data).slice(0, 200)}`);
+    }
+    const first = data[0];
+    // 3D (hidden states) vs 2D (pooled)?
+    if (Array.isArray(first) && Array.isArray(first[0])) {
+      // CLS pooling — mxbai paper default
+      const clsVector = first[0] as number[];
+      return normalizeL2(clsVector);
+    }
+    // Already pooled 2D
+    return normalizeL2(first as number[]);
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function normalizeL2(vec: number[]): number[] {
+  let sumSq = 0;
+  for (const v of vec) sumSq += v * v;
+  const norm = Math.sqrt(sumSq);
+  if (norm === 0) return vec;
+  return vec.map(v => v / norm);
+}
+
+// ── In-process local pipeline (fallback) ───────────────────────────────
 let cachedEmbedder: FeatureExtractionPipeline | null = null;
 let isWarmed = false;
 
 async function getEmbedder(): Promise<FeatureExtractionPipeline> {
   if (!cachedEmbedder) {
-    // Keep the ONNX cache in the backend directory so it survives
-    // restarts and isn't pulled fresh each time.
-    env.cacheDir = './.cache/transformers';
-    env.allowLocalModels = true;
+    // Keep the ONNX cache in the backend directory so it
+    // survives restarts and isn't pulled fresh each time.
+    transformersEnv.cacheDir = './.cache/transformers';
+    transformersEnv.allowLocalModels = true;
     cachedEmbedder = await pipeline(
       'feature-extraction',
       MODEL_SLUG,
@@ -51,8 +136,9 @@ async function getEmbedder(): Promise<FeatureExtractionPipeline> {
   return cachedEmbedder;
 }
 
-/** Warm up the embedding pipeline so the first real request isn't slow. */
+/** Warm up the in-process embedding pipeline (no-op if using API). */
 export const warmEmbedder = async (): Promise<void> => {
+  if (shouldUseHfApi()) return;  // nothing to warm
   await getEmbedder();
 };
 
@@ -62,13 +148,14 @@ export const warmEmbedder = async (): Promise<void> => {
  * retrieval prompt for documents, only for queries.
  */
 export const generateEmbedding = async (text: string): Promise<number[]> => {
+  if (shouldUseHfApi()) {
+    return callHfApiEmbedding(text);
+  }
   const embedder = await getEmbedder();
   const output = await embedder(text, {
-    pooling: 'cls',        // mxbai default; the model card says
-                          // "works really well with cls pooling (default)"
-    normalize: true,     // cosine similarity friendly
+    pooling: 'cls',
+    normalize: true,
   });
-  // output.data is a Tensor — slice to plain number[] for MongoDB.
   return Array.from(output.data as Float32Array | number[]);
 };
 
@@ -82,6 +169,5 @@ export const generateQueryEmbedding = async (query: string): Promise<number[]> =
   return generateEmbedding(QUERY_PROMPT + query);
 };
 
-// re-export for legacy callers (currently unused but kept
-// for diagnostic scripts that print whether the model warmed).
+/** Re-export for diagnostic scripts. True if a warm in-process pipeline exists. */
 export const __isWarmed = (): boolean => isWarmed;
