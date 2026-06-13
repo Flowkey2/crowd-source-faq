@@ -63,7 +63,9 @@ const guestEventSchema = new MongooseSchema<IGuestEvent>(
       required: true,
     },
     dwellMs: { type: Number, default: null },
-    scrollPct: { type: Number, default: null },
+    // v1.68 — schema fix: bound to [0..1]. Same for scrollPct
+    // (already 0..1 by definition). Keeps aggregations honest.
+    scrollPct: { type: Number, default: null, min: 0, max: 1 },
     faqLength: { type: Number, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

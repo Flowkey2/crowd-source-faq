@@ -199,8 +199,12 @@ const userSchema = new MongooseSchema<IUser>(
     totpEnabled:   { type: Boolean, default: false },
     totpSecret:    { type: String },   // AES-256-GCM encrypted; only stored after 2FA is set up
 
-    // Bookmarked community posts — NOT used for reputation scoring
-    bookmarks: { type: [{ type: MongooseSchema.Types.ObjectId, ref: 'CommunityPost' }], default: [] },
+    // Bookmarked community posts — NOT used for reputation scoring.
+    // v1.68 — schema fix: was double-nested
+    //   { type: [{ type: ObjectId, ref: '...' }] }
+    // which Mongo happily accepted but broke
+    // `find({ bookmarks: { $size: N } })` (silently matched 0).
+    bookmarks: [{ type: MongooseSchema.Types.ObjectId, ref: 'CommunityPost' }],
     // Denormalized counts for leaderboard trust score (updated on write, not computed per-request)
     acceptedAnswers: { type: Number, default: 0 },
     faqContributions: { type: Number, default: 0 },

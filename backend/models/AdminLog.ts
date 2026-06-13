@@ -46,6 +46,11 @@ const adminLogSchema = new MongooseSchema(
     details: {
       type: String,
       default: '',
+      // v1.68 — schema fix: cap details size. Was unbounded
+      // (1MB+ payloads if a misbehaving caller passed a
+      // giant string). 2k is plenty for the action metadata
+      // this log is used for.
+      maxlength: 2000,
     },
   },
   { timestamps: true }

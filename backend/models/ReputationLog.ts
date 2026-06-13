@@ -18,7 +18,16 @@ const reputationLogSchema = new MongooseSchema<IReputationLog>({
   reason: { type: String, default: '' },
   action: { type: String, required: true },
   targetId: { type: MongooseSchema.Types.ObjectId },
-  targetType: { type: String },
+  // v1.68 — schema fix: targetType was a free string. Now
+  // constrained to the literal union that the controllers
+  // actually write. A typo in a new code path now fails
+  // the schema validation rather than silently
+  // mis-classifying the log entry.
+  targetType: {
+    type: String,
+    enum: ['faq', 'comment', 'post', 'support', 'document'] as
+      ('faq' | 'comment' | 'post' | 'support' | 'document')[],
+  },
   awardedBy: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

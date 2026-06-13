@@ -77,7 +77,7 @@ const documentRecordSchema = new MongooseSchema<IDocumentRecord>(
       default: 'uploaded',
       index: true,
     },
-    rawExtractedText: { type: String, default: '' },
+    rawExtractedText: { type: String, default: '', maxlength: 2_000_000 },
     jobId: { type: String, default: null },
     insightsGenerated: { type: Number, default: 0, min: 0 },
     extractionDurationMs: { type: Number, default: null },

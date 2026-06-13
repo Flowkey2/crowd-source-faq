@@ -20,7 +20,9 @@ export interface IRevokedToken extends Document {
 
 const revokedTokenSchema = new MongooseSchema<IRevokedToken>(
   {
-    jti: { type: String, required: true, unique: true, index: true },
+    // v1.68 — schema fix: `unique: true` already creates a unique
+    // index, so the explicit `index: true` was redundant.
+    jti: { type: String, required: true, unique: true },
     userId: { type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true },
     expiresAt: {
       type: Date,

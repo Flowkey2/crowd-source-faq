@@ -38,11 +38,18 @@ const batchSchema = new MongooseSchema<IBatch>(
     },
     startDate: { type: Date, required: [true, 'Start date is required'] },
     endDate:   { type: Date, required: [true, 'End date is required'] },
+    // v1.68 — schema fix: ensure endDate > startDate. Catches
+    // admin fat-finger (e.g. swapping the two dates).
     isActive:  { type: Boolean, default: true, index: true },
     createdBy: { type: MongooseSchema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );
+
+// Mongoose-level validation: end > start
+batchSchema.path('endDate').validate(function (v: Date) {
+  return !this.startDate || v > this.startDate;
+}, 'endDate must be after startDate');
 
 // Name uniqueness — case-insensitive to prevent "Summer 2026" vs "summer 2026"
 batchSchema.index(

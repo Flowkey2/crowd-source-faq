@@ -40,6 +40,11 @@ const categorySchema = new MongooseSchema<ICategory>(
       trim: true,
       lowercase: true,
       maxlength: 140,
+      // v1.68 — schema fix: enforce kebab-case at write time
+      // (matches the slugifyCategoryName() helper). Admins
+      // who try to create "My Category!" now get a schema
+      // validation error instead of a broken URL later.
+      match: /^[a-z0-9-]+$/,
     },
     description: { type: String, default: '', maxlength: 500 },
   },
