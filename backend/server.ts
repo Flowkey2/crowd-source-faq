@@ -25,6 +25,9 @@ import askAiRoutes from './routes/askAi.js';
 import uploadRoutes from './routes/upload.js';
 import publicFaqRoutes from './routes/publicFaq.js';
 import batchRoutes from './routes/batch.js';
+import programRoutes from './routes/program.js';
+import adminProgramSettingsRoutes from './routes/adminProgramSettings.js';
+import courseRoutes from './routes/course.js';
 import supportRoutes from './routes/support.js';
 import featureFlagRoutes from './routes/featureFlag.js';
 import { documentRouter, documentAdminRouter } from './routes/documents.js';
@@ -194,6 +197,9 @@ app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/public', publicFaqRoutes);
 app.use('/api/batches', batchRoutes);
+app.use('/api/programs', programRoutes);
+app.use('/api/admin/programs', adminProgramSettingsRoutes);
+app.use('/api/courses', courseRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/feature-flags', featureFlagRoutes);
 app.use('/api/documents',       documentRouter);
@@ -454,25 +460,13 @@ if (process.env.NODE_ENV !== 'production') {
       logger.info('[server] document pipeline offline — set REDIS_TCP_URL to enable');
     }
 
-    // Clean up on shutdown
-    const cleanup = () => {
-      clearInterval(promotionInterval);
-      clearInterval(freshnessInterval);
-      clearInterval(retentionInterval);
-      clearInterval(retryInterval);
-      clearInterval(popularityInterval);
-      if (documentPromoteInterval) clearInterval(documentPromoteInterval);
-      stopEscalationScheduler();
-      stopAutoAnswerScheduler();
-      stopFAQAuditScheduler();
-      void stopDocumentWorker();
-      void shutdownTesseract();
-      // v1.68 — disconnect the Discord bot (safe if not
-      // connected)
-      void stopBot();
-    };
-    process.on('SIGTERM', cleanup);
-    process.on('SIGINT', cleanup);
+    // v1.69 — single signal handler. The previous build had two
+    // registrations (an inline `cleanup` and the module-level
+    // `gracefulShutdown` further down) racing on the same signal.
+    // The graceful one wins; cron intervals are torn down via their
+    // `.stop()` helpers inside `gracefulShutdown`. So we just rely
+    // on the bottom-of-file `process.on('SIGTERM'|'SIGINT', …)`
+    // blocks below.
   });
 }
 
