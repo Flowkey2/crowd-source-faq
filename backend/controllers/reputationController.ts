@@ -6,7 +6,7 @@ import Badge from '../models/Badge.js';
 // v1.69 — Phase 7 prep: when the leaderboard is scoped to a
 // program, the source of truth is the per-user-per-program
 // ProgramReputation doc, not the global User.points field.
-import ProgramReputation from '../models/ProgramReputation.js';
+import ProgramReputation, { awardToUser } from '../models/ProgramReputation.js';
 import { adminLog } from '../utils/http/logger.js';
 
 // ─── Auto Badge Awarder ─────────────────────────────────────────────────────
@@ -58,9 +58,26 @@ export const awardPoints = async (req: Request, res: Response): Promise<void> =>
     return;
   }
   try {
-    const { userId, delta, reason, action, targetId, targetType } = req.body;
+    // v1.69 — Phase 7: admin award points is now batchId-scoped.
+    // The body's batchId drives where the per-program write lands.
+    // When null, only the User global aggregate is updated (admin
+    // is awarding cross-program 'reputation' that doesn't belong
+    // to any one program).
+    const { userId, delta, reason, action, targetId, targetType, batchId: rawBatchId } = req.body as {
+      userId?: string;
+      delta?: number;
+      reason?: string;
+      action?: string;
+      targetId?: string;
+      targetType?: string;
+      batchId?: string;
+    };
     if (!userId || delta === undefined || !reason) {
       res.status(400).json({ message: 'userId, delta, and reason are required' });
+      return;
+    }
+    if (!Types.ObjectId.isValid(userId)) {
+      res.status(400).json({ message: 'Invalid userId.' });
       return;
     }
 
@@ -75,16 +92,27 @@ export const awardPoints = async (req: Request, res: Response): Promise<void> =>
 
     await user.save();
 
+    // v1.69 — Phase 7: per-program write when a program is
+    // specified. Dual-write with the global User aggregate.
+    const batchIdValid = rawBatchId && Types.ObjectId.isValid(rawBatchId)
+      ? new Types.ObjectId(rawBatchId)
+      : null;
+    if (batchIdValid && delta !== 0) {
+      await awardToUser(userId, batchIdValid, { points: delta })
+        .catch((err) => adminLog.warn(`[reputation] awardToUser failed for ${userId}: ${(err as Error).message}`));
+    }
+
     await ReputationLog.create({
       userId, delta, reason,
       action: action || (delta > 0 ? 'admin_point_award' : 'admin_point_deduct'),
       targetId, targetType,
+      batchId: batchIdValid,
       awardedBy: (req as any).user?.id,
     });
 
     res.json({
       userId, points: user.points, reputation: user.reputation, tier: user.tier,
-      prevPoints, prevTier, delta,
+      prevPoints, prevTier, delta, batchId: batchIdValid,
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', /* error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined */ });
