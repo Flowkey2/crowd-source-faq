@@ -55,12 +55,11 @@ jobs:
             echo "==> Cleaning quotes from env file..."
             sed -i "s/='\(.*\)'/=\1/; s/=\"\(.*\)\"/=\1/" apps/backend/.env
 
-            echo "==> Installing root dependencies (tsx + shared packages)..."
-            npm install --prefer-offline
-
-            echo "==> Installing and building frontend..."
-            cd apps/frontend
+            echo "==> Installing all workspace dependencies..."
             pnpm install --frozen-lockfile
+
+            echo "==> Building frontend..."
+            cd apps/frontend
             pnpm build
             cd ../..
 
