@@ -40,9 +40,10 @@ import { awardSpurtiPoints, spendSpurtiPoints, refundSpurtiPoints } from '../pro
 // fits there.
 import { adminLog, authLog } from '../../utils/http/logger.js';
 
-function asStringParam(v: string | string[] | undefined): string | undefined {
-  if (Array.isArray(v)) return v[0];
-  return v;
+function asStringParam(v: any): string | undefined {
+  if (Array.isArray(v)) return typeof v[0] === 'string' ? v[0] : undefined;
+  if (typeof v === 'string') return v;
+  return undefined;
 }
 
 function requireAdmin(req: Request, res: Response): { userId: Types.ObjectId } | null {
