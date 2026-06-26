@@ -1,4 +1,4 @@
-# Shamagama Wire Audit — Full Re-Audit
+# Crowd Source FAQ Wire Audit — Full Re-Audit
 
 > File-by-file audit: every route, controller, service, utility
 > Audited via: codebase_memory graph (2,056 nodes), grep, read_file

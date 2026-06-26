@@ -1,4 +1,4 @@
-# Contributing to Shamagama
+# Contributing to Crowd Source FAQ
 
 Thanks for your interest in contributing. This document covers the workflow and quality bar for getting changes into `main`.
 
@@ -8,7 +8,7 @@ By participating, you agree to abide by the [Code of Conduct](./CODE_OF_CONDUCT.
 
 ## Project Overview
 
-Shamagama is a full-stack TypeScript application:
+Crowd Source FAQ is a full-stack TypeScript application:
 
 - **Backend** — Express + Mongoose, ES modules, MongoDB Atlas. See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 - **Frontend** — React 18 + Vite + Tailwind, hooks-based.

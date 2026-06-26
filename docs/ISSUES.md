@@ -1,6 +1,6 @@
 # Yaksha FAQ Portal — Codebase Audit
 
-Senior SDE review of the Yaksha FAQ Portal (shamagama / crowd-source-faq)
+Senior SDE review of the Yaksha FAQ Portal (crowd-source-faq / crowd-source-faq)
 covering the backend API, frontend, database, and operations.
 
 Audited at commit range: 5b1da8d..8e8e93d (HEAD).

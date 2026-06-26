@@ -1,4 +1,4 @@
-// @shamagama/types — Shared TypeScript interfaces
+// @csfaq/types -- Shared TypeScript interfaces
 // This package is the single source of truth for all types shared
 // between backend and frontend.
 

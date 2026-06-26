@@ -3,7 +3,7 @@
 // Keep this file small — domain-specific constants belong in
 // their respective packages or config.yaml.
 
-export const APP_NAME = 'Shamagama';
+export const APP_NAME = 'Crowd Source FAQ';
 export const APP_VERSION = '0.1.0';
 
 // ── Pagination Defaults ──────────────────────────────────────────

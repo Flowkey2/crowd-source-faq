@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# Shamagama Configuration — Default Values
+# Crowd Source FAQ Configuration -- Default Values
 # ═══════════════════════════════════════════════════════════════════
 # This file contains all tunable defaults. Environment-specific
 # overrides go in config.dev.yaml / config.prod.yaml.
@@ -36,8 +36,8 @@ database:
 auth:
   jwt:
     expiresIn: "7d"
-    issuer: "shamagama"
-    audience: "shamagama-api"
+    issuer: "csfaq"
+    audience: "csfaq-api"
   password:
     minLength: 6
     maxLength: 128

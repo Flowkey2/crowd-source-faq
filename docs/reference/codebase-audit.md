@@ -1,4 +1,4 @@
-# Codebase Audit - Yaksha FAQ Portal (Shamagama)
+# Codebase Audit - Yaksha FAQ Portal (Crowd Source FAQ)
 Generated: 2026-06-01
 Source: CodeGraphContext MCP (117 files, 354 functions, 83 modules)
 
@@ -16,7 +16,7 @@ Full-stack FAQ & Community Platform. TypeScript backend (Express + MongoDB) + Re
 ## Directory Structure
 
 ```
-shamagama/
+crowd-source-faq/
 ├── backend/
 │   ├── config/          db.ts (connectDB)
 │   ├── controllers/     21 controllers (auth, faq, post, comment, search, escalation...)

@@ -1,5 +1,5 @@
 {
-  "name": "@shamagama/validation",
+  "name": "@csfaq/validation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@shamagama/types": "workspace:*",
+    "@csfaq/types": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 # Knowledge Item Lifecycle — Complete Design Specification
 
-> **Context:** Yaksha FAQ Portal (shamagama). TypeScript/Express/MongoDB backend, React/Vite frontend.
+> **Context:** Yaksha FAQ Portal (crowd-source-faq). TypeScript/Express/MongoDB backend, React/Vite frontend.
 > This spec supersedes any prior partial lifecycle diagrams.
 
 ---

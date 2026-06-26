@@ -1,7 +1,7 @@
-# Project Context — Shamagama FAQ & Community Platform
+# Project Context — Crowd Source FAQ FAQ & Community Platform
 
 > Semantic search-powered FAQ and community Q&A platform targeting **10,00,000 users (10 lakh / 1 million)**.
-> Project name: **Shamagama** (also known internally as "yaksha-faq-portal").
+> Project name: **Crowd Source FAQ** (also known internally as "yaksha-faq-portal").
 
 ---
 
@@ -33,7 +33,7 @@
 ## 3. Project Structure
 
 ```
-shamagama/
+crowd-source-faq/
 ├── apps/
 │   ├── backend/               # Express + TypeScript API
 │   │   ├── src/

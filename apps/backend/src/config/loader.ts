@@ -33,8 +33,7 @@ export function loadConfig(forceReload = false): AppConfig {
   }
 
   const env = process.env.NODE_ENV ?? 'development';
-  // Config files are located at the root of the backend folder
-  // When running via tsx or node, process.cwd() is /Users/yashhwanth/Documents/shamagama/backend
+  // Config files are located at the root of the backend app folder.
   const configDir = process.cwd();
 
   const defaultPath = path.join(configDir, 'config.default.yaml');

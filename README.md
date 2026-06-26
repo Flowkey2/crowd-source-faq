@@ -1,4 +1,4 @@
-# Shamagama (Yaksha FAQ Portal)
+# Crowd Source FAQ (Yaksha FAQ Portal)
 
 Full-stack FAQ portal with semantic vector search, AI-powered community moderation, and an expert promotion layer. Built to handle 1 million registered users.
 
@@ -105,7 +105,7 @@ For per-route behaviour and field schemas, see [docs/ARCHITECTURE.md](docs/ARCHI
 ## Project Structure
 
 ```
-Shamagama/
+Crowd Source FAQ/
 ├── apps/
 │   ├── backend/       # Express + TypeScript API
 │   └── frontend/      # React + Vite SPA

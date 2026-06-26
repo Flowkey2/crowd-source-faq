@@ -37,9 +37,9 @@
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
     "@sentry/node": "^10.55.0",
-    "@shamagama/types": "workspace:*",
-    "@shamagama/utils": "workspace:*",
-    "@shamagama/validation": "workspace:*",
+    "@csfaq/types": "workspace:*",
+    "@csfaq/utils": "workspace:*",
+    "@csfaq/validation": "workspace:*",
     "@upstash/redis": "^1.38.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.78.0",

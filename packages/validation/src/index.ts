@@ -1,4 +1,4 @@
-// @shamagama/validation — Shared Zod schemas
+// @csfaq/validation -- Shared Zod schemas
 // Write once, validate in both frontend forms and backend endpoints.
 
 export * from './schemas/auth.schema.js';
