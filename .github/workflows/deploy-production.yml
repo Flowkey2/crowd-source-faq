@@ -70,4 +70,7 @@ jobs:
             sudo systemctl reload nginx
 
             echo "==> Deployment complete."
+
+            echo "==> Showing last 100 lines of csfaq service logs..."
+            sudo journalctl -u csfaq.service -n 100 --no-pager
           DEPLOY
