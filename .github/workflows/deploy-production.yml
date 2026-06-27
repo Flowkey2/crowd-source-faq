@@ -71,6 +71,6 @@ jobs:
 
             echo "==> Deployment complete."
 
-            echo "==> Showing last 100 lines of application logs..."
-            tail -n 100 apps/logs/main_log.txt || true
+            echo "==> Showing first 200 lines of application logs..."
+            head -n 200 apps/logs/main_log.txt || true
           DEPLOY
