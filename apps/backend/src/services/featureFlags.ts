@@ -75,6 +75,21 @@ export const FEATURE_FLAGS = {
       'drafts. When disabled, feedback is still recorded but never applied.',
     category: 'community',
   },
+  // Phase 3 R12 — the askHuman fallback path. When disabled, posts
+  // that fall below the suggest threshold get status='pending' (the
+  // pre-Phase-3 behaviour) instead of being directly escalated for
+  // human review. Boolean-only because the registry is keyed
+  // on/off — the numeric threshold itself lives in AppSetting as
+  // 'autoAnswerAskHumanThreshold' (default 0.30).
+  communityAutoAnswerAskHumanFallback: {
+    default: true,
+    label: 'Community Auto-Answer — Ask-Human Fallback',
+    description:
+      'When ON, community posts that score below the suggest threshold are escalated ' +
+      'directly for human review. When OFF, those posts are returned to the "pending" ' +
+      'queue so the next batch can try again (the pre-Phase-3 behaviour).',
+    category: 'community',
+  },
   sessionSupport: {
     default: true,
     label: 'Session Support Tickets',
