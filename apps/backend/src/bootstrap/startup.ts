@@ -189,6 +189,27 @@ export async function startup(config: any): Promise<void> {
     logger.info('[server] document pipeline offline (disabled by feature flag or not configured)');
   }
 
+  // Phase 3 R12 — auto-answer cron registration. Gated by the
+  // community.autoAnswer.enabled feature flag (kill switch). Uses
+  // the new services/autoAnswer.ts orchestrator; the legacy
+  // setInterval-based scheduler in auto-answer.controller.ts is now
+  // a no-op deprecation shim.
+  if (await featureFlags.isEnabled('communityAutoAnswer')) {
+    const { runAutoAnswerBatch } = await import('../services/autoAnswer.js');
+    const autoAnswerIntervalMs = config.cron?.autoAnswerIntervalMs ?? 24 * 60 * 60 * 1000;
+    cronManager.register({
+      name: 'auto-answer-batch',
+      handler: () => runAutoAnswerBatch({}),
+      intervalMs: autoAnswerIntervalMs,
+      runOnStartup: false,
+    });
+    logger.info(
+      `[server] auto-answer cron registered (every ${autoAnswerIntervalMs / 1000}s, concurrency-locked)`,
+    );
+  } else {
+    logger.info('[server] auto-answer cron disabled (communityAutoAnswer feature flag off)');
+  }
+
   // Start cron manager
   cronManager.startAll();
 }

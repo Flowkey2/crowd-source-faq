@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose, { Types } from 'mongoose';
 import FAQ, { type IFAQ } from './faq.model.js';
+import CommunityPost from '../community/community-post.model.js';
 import { generateEmbedding, generateQueryEmbedding } from '../../utils/ai/embeddings.js';
 import { adminLog } from '../../utils/http/logger.js';
 import { invalidateCache } from '../../utils/http/cache.js';
@@ -445,6 +446,24 @@ export const updateFAQ = async (req: Request<{ id: string }>, res: Response): Pr
     }
 
     await faq.save();
+
+    // ── Phase 3 R12 auto-answer hook ─────────────────────────────────────
+    // When an admin edits a FAQ, find any community posts that quoted
+    // this FAQ as the source of their AI-suggested answer and flag them
+    // for re-evaluation. Fire-and-forget.
+    if (question || answer || category) {
+      CommunityPost.updateMany(
+        {
+          aiAnswerSource: `faq:${String(faq._id)}`,
+          aiAnswerStatus: { $in: ['suggested', 'ask_human'] },
+        },
+        { $set: { pendingReviews: true } },
+      ).catch((err: Error) => {
+        // Best-effort — log but don't fail the FAQ edit.
+        // eslint-disable-next-line no-console
+        console.warn(`[updateFAQ] pendingReviews flag failed: ${err.message}`);
+      });
+    }
 
     // Invalidate search cache so updated FAQ reflects immediately
     await invalidateCache();

@@ -473,9 +473,10 @@ export async function rerunWithContext(
   if (!post) return makeErrorResult('post not found');
 
   const augmentedBody = `${post.body ?? ''}\n\n[ADMIN NOTE] ${extraContext}`.slice(0, 4000);
-  // Temporarily mutate the in-memory post so the next read inside
-  // processPost sees the augmented body when it queries. We re-save
-  // before returning so the on-disk state stays in sync.
+  // Clear the cooldown gate so this rerun is never short-circuited.
+  // Without this, a second call within 60min returns the prior decision
+  // without doing the work the admin explicitly asked for.
+  post.lastAutoAnswerAt = null;
   post.body = augmentedBody;
   await post.save();
 
