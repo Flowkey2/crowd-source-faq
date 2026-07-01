@@ -125,11 +125,10 @@ export default function CommunityPage() {
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [posts, user, window.location.search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [posts, user, window.location.search]);
 
   useEffect(() => {
     fetchPosts(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, sort, showAllPrograms]);
 
   // Reset cursor + posts when filter/sort changes so we paginate the
@@ -155,7 +154,6 @@ export default function CommunityPage() {
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMore, loading, loadingMore, nextCursor, filter, sort, showAllPrograms]);
 
   const runSemanticSearch = useCallback(async (q: string) => {
@@ -211,7 +209,7 @@ export default function CommunityPage() {
       return;
     }
     fetchPosts(true);
-  }, [filter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filter, sort]);
 
   const handlePostCreated = (newPost: Post) => {
     setPosts((prev) => [newPost, ...prev]);

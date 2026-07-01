@@ -103,7 +103,6 @@ User Question: ${question}
 export const trackWelcomeOnboarding = async (req: Request, res: Response): Promise<void> => {
   try {
     const { timeSpent } = req.body;
-    // @ts-ignore
     const userId = req.user?._id;
 
     if (!userId) {
@@ -125,7 +124,6 @@ export const trackWelcomeOnboarding = async (req: Request, res: Response): Promi
 
 export const completeOrientation = async (req: Request, res: Response): Promise<void> => {
   try {
-    // @ts-ignore
     const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
@@ -145,7 +143,6 @@ export const completeOrientation = async (req: Request, res: Response): Promise<
 export const selectProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { project } = req.body;
-    // @ts-ignore
     const userId = req.user?._id;
 
     if (!userId) {
@@ -204,7 +201,6 @@ export const selectProject = async (req: Request, res: Response): Promise<void> 
 
 export const getMyProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    // @ts-ignore
     const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });

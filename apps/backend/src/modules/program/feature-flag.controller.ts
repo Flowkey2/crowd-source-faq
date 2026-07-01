@@ -225,7 +225,7 @@ export async function toggleFeatureFlag(req: Request, res: Response): Promise<vo
     adminLog.error(`[featureFlags] toggleFeatureFlag failed: ${(err as Error).message}`);
     res.status(500).json({ message: 'Failed to update feature flag.' });
   }
-};
+}
 
 // ─── Per-Program Overrides (Phase 8) ────────────────────────────────────────
 //

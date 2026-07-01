@@ -88,7 +88,7 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
     // are on our Cloudinary account. Cloudinary's free plan caps the asset
     // count + size, so we hard-limit per post to keep the feed reasonable.
     const MAX_ATTACHMENTS = 4;
-    let safeAttachments: Array<{ url: string; publicId?: string; gcsUri?: string; objectPath?: string; width?: number; height?: number; format?: string; bytes?: number }> = [];
+    const safeAttachments: Array<{ url: string; publicId?: string; gcsUri?: string; objectPath?: string; width?: number; height?: number; format?: string; bytes?: number }> = [];
     if (Array.isArray(attachments) && attachments.length > 0) {
       if (attachments.length > MAX_ATTACHMENTS) {
         res.status(400).json({ message: `At most ${MAX_ATTACHMENTS} image attachments per post.` });
@@ -327,7 +327,7 @@ export const toggleUpvote = async (req: Request, res: Response): Promise<void> =
 const VALID_REPORT_REASONS = ['spam', 'duplicate', 'abuse', 'other'] as const;
 type ReportReason = typeof VALID_REPORT_REASONS[number];
 
-export const reportPost = async (req: Request<{ id: string }, {}, { reason: string }>, res: Response): Promise<void> => {
+export const reportPost = async (req: Request<{ id: string }, Record<string, never>, { reason: string }>, res: Response): Promise<void> => {
   if (!req.user) { res.status(401).json({ message: 'Not authorized' }); return; }
   try {
     const { reason } = req.body;

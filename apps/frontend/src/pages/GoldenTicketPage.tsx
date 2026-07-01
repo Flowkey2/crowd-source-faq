@@ -136,7 +136,7 @@ export default function GoldenTicketPage(): React.ReactElement {
     if (!status) return;
     const cap = Math.min(MAX_SP, status.sp);
     if (spCost > cap) setSpCost(Math.max(MIN_SP, Math.min(cap, 1)));
-  }, [status?.sp, status?.canSubmitGolden]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [status?.sp, status?.canSubmitGolden]);
 
   const reloadStatus = useCallback(async () => {
     if (!isAuthed) return;

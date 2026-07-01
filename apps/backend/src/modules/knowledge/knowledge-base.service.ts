@@ -107,7 +107,7 @@ Rules:
 - Skip: greetings, small talk, off-topic tangents, incomplete answers
 
 Return a JSON array (no markdown), each item:
-[{\"question\":\"...\",\"answer\":\"...\",\"confidence\":0.8,\"snippet\":\"exact 2-sentence excerpt\"}]`;
+[{"question":"...","answer":"...","confidence":0.8,"snippet":"exact 2-sentence excerpt"}]`;
 
   const userContent = `Meeting topic: "${topic}"\n\nTranscript:\n${transcriptText.slice(0, 15000)}`;
 

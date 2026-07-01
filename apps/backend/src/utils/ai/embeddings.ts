@@ -69,7 +69,7 @@ function normalizeL2(vec: number[]): number[] {
 }
 
 // ── In-process local pipeline (disabled) ───────────────────────────────
-let isWarmed = false;
+const isWarmed = false;
 
 /** Warm up the embedding pipeline. */
 export const warmEmbedder = async (): Promise<void> => {

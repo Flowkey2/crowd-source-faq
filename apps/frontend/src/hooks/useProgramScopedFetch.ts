@@ -43,6 +43,5 @@ export function useProgramScopedFetch(
     if (activeProgramId !== null) {
       void fn(activeProgramId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProgramId, ...deps]);
 }

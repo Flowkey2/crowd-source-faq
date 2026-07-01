@@ -26,7 +26,7 @@ function bumpAnonCount(): number {
     localStorage.setItem(ANON_AI_COUNT_KEY, String(next));
     if (!localStorage.getItem(ANON_AI_RESET_KEY))
       localStorage.setItem(ANON_AI_RESET_KEY, String(Date.now() + 86400000));
-  } catch {}
+  } catch { void 0 }
   return next;
 }
 
@@ -48,9 +48,9 @@ interface PendingAttachment {
 type PanelState = 'collapsed' | 'minimized' | 'expanded';
 const STATE_KEY = 'yaksha_chat_state';
 function readPersistedState(): PanelState {
-  try { const v = localStorage.getItem(STATE_KEY); if (v === 'minimized' || v === 'expanded') return v; } catch {} return 'collapsed';
+  try { const v = localStorage.getItem(STATE_KEY); if (v === 'minimized' || v === 'expanded') return v; } catch { void 0 } return 'collapsed';
 }
-function persistState(s: PanelState) { try { localStorage.setItem(STATE_KEY, s); } catch {} }
+function persistState(s: PanelState) { try { localStorage.setItem(STATE_KEY, s); } catch { void 0 } }
 
 function SparkleIcon({ size = 24 }: { size?: number }) {
   return (

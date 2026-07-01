@@ -84,7 +84,7 @@ interface GroupedFAQs {
 
 // GET /api/faq — All FAQs grouped by category (with optional pagination)
 // Query params: page (default 1), limit (default 0=all), category (filter by category), cursor (opaque)
-export const getAllFAQs = async (req: Request<{}, {}, {}, GetAllFAQsQuery>, res: Response): Promise<void> => {
+export const getAllFAQs = async (req: Request<Record<string, never>, Record<string, never>, Record<string, never>, GetAllFAQsQuery>, res: Response): Promise<void> => {
   try {
     const page = Math.max(1, parseInt(req.query.page ?? '1'));
     const limitVal = req.query.limit ?? '0';
@@ -245,7 +245,7 @@ export const getRecentFAQs = async (req: Request, res: Response): Promise<void> 
 
 // GET /api/faq/paginated — Flat paginated list of FAQs with optional category filter
 // Query params: page (default 1), limit (default 20), category (optional), cursor (opaque)
-export const getPaginatedFAQs = async (req: Request<{}, {}, {}, GetPaginatedFAQsQuery>, res: Response): Promise<void> => {
+export const getPaginatedFAQs = async (req: Request<Record<string, never>, Record<string, never>, Record<string, never>, GetPaginatedFAQsQuery>, res: Response): Promise<void> => {
   try {
     const page = Math.max(1, parseInt(req.query.page || '1'));
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || '20')));
@@ -479,7 +479,7 @@ export const deleteFAQ = async (req: Request<{ id: string }>, res: Response): Pr
 
 // POST /api/faq/check-match — Check if a user's question already exists in the FAQ
 // Used by the community board to prevent duplicate questions
-export const checkFAQMatch = async (req: Request<{}, {}, CheckFAQMatchBody>, res: Response): Promise<void> => {
+export const checkFAQMatch = async (req: Request<Record<string, never>, Record<string, never>, CheckFAQMatchBody>, res: Response): Promise<void> => {
   try {
     const { query } = req.body;
 
@@ -552,7 +552,7 @@ export const checkFAQMatch = async (req: Request<{}, {}, CheckFAQMatchBody>, res
 };
 
 // PATCH /api/faq/:id/feedback — Helpful/unhelpful vote on an FAQ
-export const submitFeedback = async (req: Request<{ id: string }, {}, { helpful: boolean }>, res: Response): Promise<void> => {
+export const submitFeedback = async (req: Request<{ id: string }, Record<string, never>, { helpful: boolean }>, res: Response): Promise<void> => {
   try {
     const { helpful } = req.body;
     if (typeof helpful !== 'boolean') {
@@ -611,7 +611,7 @@ export const submitFeedback = async (req: Request<{ id: string }, {}, { helpful:
 };
 
 // POST /api/faq/:id/report — Report an FAQ as inaccurate/outdated
-export const reportFAQ = async (req: Request<{ id: string }, {}, { reason: string }>, res: Response): Promise<void> => {
+export const reportFAQ = async (req: Request<{ id: string }, Record<string, never>, { reason: string }>, res: Response): Promise<void> => {
   try {
     const { reason } = req.body;
     if (!reason || !reason.trim()) {
@@ -677,7 +677,7 @@ export const getFAQHistory = async (req: Request<{ id: string }>, res: Response)
 };
 
 // POST /api/faq/:id/suggest — Suggest a better answer for an FAQ
-export const createFAQSuggestion = async (req: Request<{ id: string }, {}, { suggestion: string }>, res: Response): Promise<void> => {
+export const createFAQSuggestion = async (req: Request<{ id: string }, Record<string, never>, { suggestion: string }>, res: Response): Promise<void> => {
   try {
     const { suggestion } = req.body;
     if (!suggestion || !suggestion.trim()) {

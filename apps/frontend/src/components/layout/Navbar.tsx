@@ -31,7 +31,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.setAttribute('data-theme', t);
   try {
     localStorage.setItem('theme', theme);
-  } catch {}
+  } catch { void 0 }
 }
 
 export default function Navbar({ showProgramSwitcher: _showProgramSwitcher = false, isAdminView = false }: { showProgramSwitcher?: boolean, isAdminView?: boolean } = {}) {

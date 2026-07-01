@@ -26,7 +26,11 @@ import {
   getSessionQuestions,
   createSessionQuestion,
   updateSessionQuestion,
-  deleteSessionQuestion
+  deleteSessionQuestion,
+  // v1.69 — Session History: returns the per-session activity
+  // log used by the SessionTimeline component on the frontend.
+  // Mounted at GET /admin/welcome/zoom-sessions/:id/activity.
+  getZoomSessionActivity,
 } from './admin-welcome.controller.js';
 import { adminOnly } from '../../middleware/admin.js';
 import { protect } from '../../middleware/auth.js';
@@ -97,5 +101,8 @@ router.get('/zoom-sessions/:id/questions', getSessionQuestions);
 router.post('/zoom-sessions/:id/questions', createSessionQuestion);
 router.put('/zoom-sessions/:id/questions/:qId', updateSessionQuestion);
 router.delete('/zoom-sessions/:id/questions/:qId', deleteSessionQuestion);
+
+// v1.69 — Session History / Activity Log: per-session timeline.
+router.get('/zoom-sessions/:id/activity', getZoomSessionActivity);
 
 export default router;

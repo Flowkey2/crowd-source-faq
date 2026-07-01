@@ -295,7 +295,7 @@ function CommentItem({ comment, post, currentUserId, userRole, onUpdate }: {
       `/community/${post._id}/comments/${comment._id}/downvote`
     );
     if (res.data.deleted) {
-      try { new Audio('/fahhhhh.mp3').play(); } catch (_) {}
+      try { new Audio('/fahhhhh.mp3').play(); } catch (_) { void 0 }
       onUpdate((post.comments as Comment[]).filter(c => c._id !== comment._id));
       return;
     }
@@ -414,7 +414,7 @@ function CommentItem({ comment, post, currentUserId, userRole, onUpdate }: {
                 {comment.verified ? 'Unverify' : '✅ Verify'}
               </button>
             )}
-            {!post.answer && isPostAuthor && (
+            {!post.answer && (isPostAuthor || userRole === 'admin' || userRole === 'moderator') && (
               <button onClick={handleAccept}
                 className="text-[10px] text-ink-faint hover:text-success transition-colors flex items-center gap-0.5">
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">

@@ -28,7 +28,6 @@ export default function CreatePostDialog({ onClose, onCreated, prefillTitle = ''
       onClose();
       openModal('signin');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   if (!user) return null;
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -67,7 +66,7 @@ export default function CreatePostDialog({ onClose, onCreated, prefillTitle = ''
         const { t } = JSON.parse(draft);
         return t || prefillTitle || '';
       }
-    } catch {}
+    } catch { void 0 }
     return prefillTitle || '';
   });
   const [body, setBody] = useState(() => {
@@ -77,7 +76,7 @@ export default function CreatePostDialog({ onClose, onCreated, prefillTitle = ''
         const { b } = JSON.parse(draft);
         return b || '';
       }
-    } catch {}
+    } catch { void 0 }
     return '';
   });
   const [loading, setLoading] = useState(false);
@@ -100,11 +99,11 @@ export default function CreatePostDialog({ onClose, onCreated, prefillTitle = ''
   // Save draft on field changes
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: val, b: body })); } catch {}
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: val, b: body })); } catch { void 0 }
   };
   const handleBodyChange = (val: string) => {
     setBody(val);
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: title, b: val })); } catch {}
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ t: title, b: val })); } catch { void 0 }
   };
 
   useEffect(() => {
@@ -190,7 +189,7 @@ export default function CreatePostDialog({ onClose, onCreated, prefillTitle = ''
         })),
       });
       // Clear draft on success
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { void 0 }
       // Show toast with duplicate check result
       const dupCount = duplicateMatch?.matches?.length ?? 0;
       if (dupCount > 0) {
