@@ -1,6 +1,8 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import connectDB from '../config/db.js';
 import { runWithContext } from '../utils/http/requestContext.js';
@@ -8,6 +10,14 @@ import { requestLogger } from '../utils/http/requestLogger.js';
 import { ingestFrontendLog } from '../utils/http/fileLogger.js';
 import { publicBasePath } from '../utils/publicBasePath.js';
 import { programScope } from '../middleware/programScope.js';
+
+// Absolute path to the `uploads/` directory.
+// Resolved from the source file location so it works regardless of
+// process.cwd() — which Vercel serverless sets to /var/task, not
+// the backend root, causing express.static('uploads') to miss the
+// directory entirely and return 404 for every uploaded asset.
+const __dirname_mw = path.dirname(fileURLToPath(import.meta.url));
+const uploadsStaticPath = path.resolve(__dirname_mw, '../../../uploads');
 
 export function registerMiddleware(app: Express, config: any): void {
   // 1. Trust the proxy hops
@@ -105,8 +115,12 @@ export function registerMiddleware(app: Express, config: any): void {
   // path — e.g. a stale localStorage entry from before this fix).
   // The `publicBasePath()` helper reads `PUBLIC_BASE_PATH` env
   // (default `/csfaq`) so this works under any deployment prefix.
-  app.use(`${publicBasePath()}/uploads`, express.static('uploads'));
-  app.use('/uploads', express.static('uploads'));
+  //
+  // v1.70 — absolute path fix: use the path anchored to import.meta.url
+  // (see uploadsStaticPath at top of file) instead of bare 'uploads'
+  // so Vercel's /var/task CWD doesn't cause a 404.
+  app.use(`${publicBasePath()}/uploads`, express.static(uploadsStaticPath));
+  app.use('/uploads', express.static(uploadsStaticPath));
 
   // Frontend log endpoint
   app.post('/csfaq/api/log', ingestFrontendLog);
