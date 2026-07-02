@@ -29,7 +29,13 @@ vi.mock('../../../services/webFetcher.js', () => ({
   fetchAndExtract: mockFetchAndExtract,
 }));
 
-import { addWebPage, listWebPages, deleteWebPage } from '../adminWebPages.controller.js';
+import {
+  addWebPage,
+  listWebPages,
+  deleteWebPage,
+  approveWebPage,
+  unapproveWebPage,
+} from '../adminWebPages.controller.js';
 import WebPage from '../../../models/WebPage.js';
 
 beforeEach(async () => {
@@ -156,5 +162,81 @@ describe('deleteWebPage', () => {
     expect(payload.ok).toBe(true);
     const after = await WebPage.findById(row._id);
     expect(after).toBeNull();
+  });
+});
+
+describe('approveWebPage / unapproveWebPage — Phase 8', () => {
+  it('approveWebPage sets approved: true and returns the updated page', async () => {
+    const row = await WebPage.create({
+      url: 'https://auto.example.com/page',
+      domain: 'auto.example.com',
+      title: 'auto',
+      text: 'auto-discovered content for retrieval tests',
+      source: 'auto_discovered',
+      statusCode: 200,
+      fetchedAt: new Date(),
+      approved: false,
+    });
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await approveWebPage({ params: { id: String(row._id) } } as never, { status, json } as never);
+    expect(json).toHaveBeenCalled();
+    const payload = json.mock.calls[0][0] as { ok: boolean; page: { approved: boolean; url: string } };
+    expect(payload.ok).toBe(true);
+    expect(payload.page.approved).toBe(true);
+    expect(payload.page.url).toBe('https://auto.example.com/page');
+    const stored = await WebPage.findById(row._id);
+    expect(stored?.approved).toBe(true);
+  });
+
+  it('unapproveWebPage sets approved: false and returns the updated page', async () => {
+    const row = await WebPage.create({
+      url: 'https://pasted.example.com/page',
+      domain: 'pasted.example.com',
+      title: 'pasted',
+      text: 'admin-pasted approved content for retrieval tests',
+      source: 'admin_pasted',
+      statusCode: 200,
+      fetchedAt: new Date(),
+      approved: true,
+    });
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await unapproveWebPage({ params: { id: String(row._id) } } as never, { status, json } as never);
+    expect(json).toHaveBeenCalled();
+    const payload = json.mock.calls[0][0] as { ok: boolean; page: { approved: boolean } };
+    expect(payload.ok).toBe(true);
+    expect(payload.page.approved).toBe(false);
+    const stored = await WebPage.findById(row._id);
+    expect(stored?.approved).toBe(false);
+  });
+
+  it('approveWebPage returns 400 on invalid id', async () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await approveWebPage({ params: { id: 'not-an-objectid' } } as never, { status, json } as never);
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.any(String) }));
+  });
+
+  it('approveWebPage returns 404 on missing', async () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await approveWebPage({ params: { id: new Types.ObjectId().toString() } } as never, { status, json } as never);
+    expect(status).toHaveBeenCalledWith(404);
+  });
+
+  it('unapproveWebPage returns 400 on invalid id', async () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await unapproveWebPage({ params: { id: 'not-an-objectid' } } as never, { status, json } as never);
+    expect(status).toHaveBeenCalledWith(400);
+  });
+
+  it('unapproveWebPage returns 404 on missing', async () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    await unapproveWebPage({ params: { id: new Types.ObjectId().toString() } } as never, { status, json } as never);
+    expect(status).toHaveBeenCalledWith(404);
   });
 });

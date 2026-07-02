@@ -62,6 +62,12 @@ export const addWebPage = async (req: Request, res: Response): Promise<void> => 
         $set: {
           url, domain, title: title ?? '', text, statusCode, fetchedAt: new Date(),
           lastFetchError: null,
+          // Admin-pasted URLs are pre-approved — the admin already
+          // reviewed the URL when pasting it. Auto-discovered rows
+          // (source='auto_discovered') default to approved=false and
+          // need an explicit PATCH /:id/approve before they surface
+          // in the retrieval fan-out.
+          approved: true,
         },
         $setOnInsert: { source: 'admin_pasted' as const, createdBy: reviewerId },
       },
@@ -101,4 +107,55 @@ export const deleteWebPage = async (req: Request, res: Response): Promise<void> 
     res.status(404).json({ message: 'not found' }); return;
   }
   res.json({ ok: true });
+};
+
+/**
+ * PATCH /admin/web-pages/:id/approve — flip `approved` to true on a row.
+ *
+ * Phase 8: used to manually promote auto-discovered pages into the
+ * retrieval fan-out. Admin-pasted pages are already `approved: true`
+ * at insertion time (see addWebPage above), but admin can re-approve
+ * after a prior unapprove too.
+ *
+ * Errors:
+ *   400 — id is not a valid Mongo ObjectId
+ *   404 — no WebPage row with that id
+ */
+export const approveWebPage = async (req: Request, res: Response): Promise<void> => {
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  if (!id || !Types.ObjectId.isValid(id)) {
+    res.status(400).json({ message: 'invalid id' }); return;
+  }
+  const updated = await WebPage.findByIdAndUpdate(
+    id,
+    { $set: { approved: true } },
+    { new: true },
+  ).lean();
+  if (!updated) { res.status(404).json({ message: 'not found' }); return; }
+  res.json({ ok: true, page: updated });
+};
+
+/**
+ * PATCH /admin/web-pages/:id/unapprove — flip `approved` to false.
+ *
+ * Phase 8: de-publishes a row (admin or auto-discovered) from the
+ * retrieval fan-out without deleting it. Useful when an approved
+ * page later turns out to be low-quality or stale.
+ *
+ * Errors: same shape as approveWebPage (400 invalid id, 404 missing).
+ */
+export const unapproveWebPage = async (req: Request, res: Response): Promise<void> => {
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  if (!id || !Types.ObjectId.isValid(id)) {
+    res.status(400).json({ message: 'invalid id' }); return;
+  }
+  const updated = await WebPage.findByIdAndUpdate(
+    id,
+    { $set: { approved: false } },
+    { new: true },
+  ).lean();
+  if (!updated) { res.status(404).json({ message: 'not found' }); return; }
+  res.json({ ok: true, page: updated });
 };

@@ -45,6 +45,7 @@ async function seedPage(overrides: {
   text?: string;
   fetchedAt?: Date;
   lastFetchError?: string | null;
+  approved?: boolean;
 } = {}) {
   const url = overrides.url ?? 'https://docs.example.com/setup';
   const parsed = new URL(url);
@@ -57,6 +58,10 @@ async function seedPage(overrides: {
     statusCode: 200,
     fetchedAt: overrides.fetchedAt ?? new Date(),
     lastFetchError: overrides.lastFetchError ?? null,
+    // Phase 8: retrieval source filters on approved:true. Existing
+    // tests assume a row is in the eligible set; default approved
+    // to true so the legacy seeded rows remain visible to retrieval.
+    approved: overrides.approved ?? true,
   });
 }
 
@@ -127,5 +132,20 @@ describe('webTextSource.search — error filter', () => {
     const urls = hits.map((h) => h.meta?.url);
     expect(urls).not.toContain('https://broken.example.com');
     expect(urls).toContain('https://good.example.com');
+  });
+});
+
+describe('webTextSource.search — approved filter (Phase 8)', () => {
+  it('excludes pages where approved=false', async () => {
+    // seed one approved (visible) and one unapproved (hidden) row that
+    // both match the same query terms. Only the approved one should
+    // appear in results — auto-discovered rows stay out of the
+    // retrieval fan-out until an admin flips approved.
+    await seedPage({ url: 'https://approved.example.com', title: 'Approved setup', text: 'approved dashboard content', approved: true });
+    await seedPage({ url: 'https://pending.example.com', title: 'Pending setup', text: 'pending dashboard content', approved: false });
+    const hits = await webTextSource.search('dashboard', null, { topK: 10 });
+    const urls = hits.map((h) => h.meta?.url);
+    expect(urls).toContain('https://approved.example.com');
+    expect(urls).not.toContain('https://pending.example.com');
   });
 });

@@ -1,9 +1,17 @@
 /**
- * WebPage — Phase 5.
+ * WebPage — Phase 5, extended in Phase 8.
  *
- * Admin-pasted URLs that the auto-answer context retriever can pull
- * into its fan-out. Phase 5 only supports the `admin_pasted` source —
- * `auto_discovered` is reserved for a future crawl-mode feature.
+ * Admin-pasted URLs and auto-discovered URLs that the auto-answer
+ * context retriever can pull into its fan-out.
+ *
+ * Two `source` values:
+ *  - `admin_pasted` — admins explicitly added the URL via
+ *    `POST /admin/web-pages`. Pre-approved at insertion time
+ *    (`approved: true`) because the admin already reviewed it.
+ *  - `auto_discovered` — the webCrawler cron fetched a seed URL
+ *    and inserted it with `approved: false`. An admin must
+ *    PATCH /admin/web-pages/:id/approve before it surfaces in
+ *    the retrieval fan-out.
  *
  * Schema notes
  * ------------
@@ -22,6 +30,9 @@
  *    failed (4xx/5xx, oversized, non-HTML). The retrieval source
  *    excludes any row where this is set so we don't surface broken
  *    links to users.
+ *  - `approved` (Phase 8) gates the retrieval source. The
+ *    webTextSource filter requires `approved: true` so unapproved
+ *    auto-discovered rows never bleed into the context window.
  *  - No `batchId` field — web pages are GLOBAL. The retrieval source
  *    can accept a `batchId` filter (it will be a no-op on this
  *    collection, since WebPage documents don't carry one).
@@ -29,7 +40,7 @@
 
 import mongoose, { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
-export type WebPageSource = 'admin_pasted';
+export type WebPageSource = 'admin_pasted' | 'auto_discovered';
 
 export interface IWebPage extends Document {
   url: string;
@@ -40,6 +51,7 @@ export interface IWebPage extends Document {
   statusCode: number;
   lastFetchError: string | null;
   fetchedAt: Date;
+  approved: boolean;
   createdBy?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
@@ -72,9 +84,14 @@ const webPageSchema = new MongooseSchema<IWebPage>(
     },
     source: {
       type: String,
-      enum: ['admin_pasted'] as WebPageSource[],
+      enum: ['admin_pasted', 'auto_discovered'] as WebPageSource[],
       required: [true, 'source is required'],
       default: 'admin_pasted',
+      index: true,
+    },
+    approved: {
+      type: Boolean,
+      default: false,
       index: true,
     },
     statusCode: {

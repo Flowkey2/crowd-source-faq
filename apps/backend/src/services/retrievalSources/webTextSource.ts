@@ -1,15 +1,15 @@
 /**
- * webTextSource — Phase 5.
+ * webTextSource — Phase 5, extended in Phase 8.
  *
- * `RetrievalSource` for admin-pasted web pages (`WebPage` collection).
- * Returns hits ranked by Mongo `$text` score, with per-page confidence
+ * `RetrievalSource` for web pages (`WebPage` collection). Returns
+ * hits ranked by Mongo `$text` score, with per-page confidence
  * decaying from 0.85 → 0.5 once the page is older than 7 days.
  *
  * Confidence rationale
  * --------------------
  *  - 0.85 (fresh) sits between community (0.85) and kb (1.1) — web
- *    pages are curated (admin-pasted) but the content is out of our
- *    control, so we don't give them the same trust as a Q&A we wrote.
+ *    pages are curated but the content is out of our control, so
+ *    we don't give them the same trust as a Q&A we wrote.
  *  - After 7d, confidence drops to 0.5 — admin can re-fetch via
  *    `POST /admin/web-pages` with the same URL to refresh.
  *
@@ -17,6 +17,10 @@
  * ---------
  *  - Always excludes rows where `lastFetchError` is set (broken pages
  *    shouldn't be returned to users).
+ *  - Phase 8: only returns rows where `approved === true`. Admin-pasted
+ *    URLs are pre-approved by the controller at insertion; auto-
+ *    discovered URLs come in unapproved and need an admin to
+ *    PATCH /admin/web-pages/:id/approve before they surface here.
  *  - `batchId` is accepted for API compatibility with the rest of the
  *    retrieval sources, but WebPage documents don't carry a batchId so
  *    the filter is a no-op here.
@@ -35,7 +39,7 @@ export const webTextSource: RetrievalSource = {
   async search(query, batchId, opts) {
     const topK = opts.topK ?? 3;
     try {
-      const filter: Record<string, unknown> = { lastFetchError: null };
+      const filter: Record<string, unknown> = { lastFetchError: null, approved: true };
       if (batchId) filter.batchId = batchId;
       const docs = await WebPage.find(
         { ...filter, $text: { $search: query } },
