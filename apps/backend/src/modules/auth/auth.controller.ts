@@ -64,6 +64,7 @@ interface UserResponse {
   mentorAssigned?: string;
   projectAssignedAt?: Date;
   projectSelectionLocked?: boolean;
+  guidedTourCompleted?: boolean;
 }
 
 // POST /api/auth/register
@@ -116,6 +117,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       mentorAssigned: user.mentorAssigned,
       projectAssignedAt: user.projectAssignedAt,
       projectSelectionLocked: user.projectSelectionLocked,
+      guidedTourCompleted: user.guidedTourCompleted,
     };
 
     res.status(201).json({ token, refreshToken, user: userResponse });
@@ -198,6 +200,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       mentorAssigned: user.mentorAssigned,
       projectAssignedAt: user.projectAssignedAt,
       projectSelectionLocked: user.projectSelectionLocked,
+      guidedTourCompleted: user.guidedTourCompleted,
     };
 
     res.json({ token, refreshToken, user: userResponse });
@@ -228,6 +231,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     mentorAssigned: (req.user as any).mentorAssigned,
     projectAssignedAt: (req.user as any).projectAssignedAt,
     projectSelectionLocked: (req.user as any).projectSelectionLocked,
+    guidedTourCompleted: (req.user as any).guidedTourCompleted,
   };
 
   res.json({ user: userResponse });
@@ -255,18 +259,24 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { name, email, avatar } = req.body as {
+    const { name, email, avatar, guidedTourCompleted } = req.body as {
       name?: string;
       email?: string;
       avatar?: { url?: string; publicId?: string; gcsUri?: string; objectPath?: string } | null;
+      guidedTourCompleted?: boolean;
     };
 
-    if (!name && !email && avatar === undefined) {
-      res.status(400).json({ message: 'Provide at least one of: name, email, avatar.' });
+    if (!name && !email && avatar === undefined && guidedTourCompleted === undefined) {
+      res.status(400).json({ message: 'Provide at least one of: name, email, avatar, guidedTourCompleted.' });
       return;
     }
 
-    const updates: Partial<{ name: string; email: string; avatar: { url: string; publicId?: string; gcsUri?: string; objectPath?: string } | null }> = {};
+    const updates: Partial<{
+      name: string;
+      email: string;
+      avatar: { url: string; publicId?: string; gcsUri?: string; objectPath?: string } | null;
+      guidedTourCompleted: boolean;
+    }> = {};
     if (name) updates.name = name;
     if (email) {
       // Check if email is already taken by another user
@@ -328,6 +338,10 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    if (guidedTourCompleted !== undefined) {
+      updates.guidedTourCompleted = guidedTourCompleted;
+    }
+
     const updated = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
     if (!updated) {
       res.status(404).json({ message: 'User not found.' });
@@ -346,6 +360,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       mentorAssigned: (updated as any).mentorAssigned,
       projectAssignedAt: (updated as any).projectAssignedAt,
       projectSelectionLocked: (updated as any).projectSelectionLocked,
+      guidedTourCompleted: (updated as any).guidedTourCompleted,
     };
 
     res.json({ message: 'Profile updated.', user: userResponse });
