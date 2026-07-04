@@ -4,8 +4,10 @@ import { migrateZoomSettingsToSessions } from '../utils/zoomMigration.js';
 import { startBot, stopBot } from '../integrations/discord/discordBot.js';
 import { botManager } from '../integrations/discord/botManager.js';
 import { startEscalationScheduler, stopEscalationScheduler } from '../modules/community/escalation.controller.js';
-import { runScheduledAutoAnswer, stopAutoAnswerScheduler } from '../modules/ai/auto-answer.controller.js';
-import { runScheduledFAQAudit, stopFAQAuditScheduler } from '../modules/faq/faq-audit.controller.js';
+// Note: runScheduledAutoAnswer() / stopAutoAnswerScheduler() (auto-answer.controller.ts)
+// and runScheduledFAQAudit() / stopFAQAuditScheduler() (faq-audit.controller.ts)
+// are no-op shims kept for backwards compat. The real scheduling happens in
+// cronManager (see below: 'auto-answer-batch' + 'freshness-check' registrations).
 import { startDocumentWorker, stopDocumentWorker } from '../utils/jobs/documentQueue.js';
 import { notificationsService } from '../services/notifications.service.js';
 import { banService } from '../services/ban.service.js';
@@ -74,9 +76,11 @@ export async function startup(config: any): Promise<void> {
   }
 
   // Start schedulers & bots
+  // Note: runScheduledAutoAnswer() / runScheduledFAQAudit() are no longer
+  // called here — both are registered via cronManager in this same file
+  // (names: 'auto-answer-batch' and 'freshness-check'). The shim functions
+  // still exist for external callers but emit a deprecation WARN.
   startEscalationScheduler();
-  runScheduledAutoAnswer().catch((err) => logger.error(`[autoAnswer] Startup: ${(err as Error).message}`));
-  runScheduledFAQAudit().catch((err) => logger.error(`[faqAudit] Startup: ${(err as Error).message}`));
 
   // Phase 1 R3 — drain any pending notification outbox rows on startup
   // so a restart doesn't sit on unsent notifications. Best-effort.
@@ -282,9 +286,13 @@ export async function stopAllSchedulers(): Promise<void> {
   // Stop escalation scheduler
   stopEscalationScheduler();
 
-  // Stop AI schedulers
-  stopAutoAnswerScheduler();
-  stopFAQAuditScheduler();
+  // Stop AI schedulers.
+  // Note: stopAutoAnswerScheduler() / stopFAQAuditScheduler() are no-op
+  // shims — the real work is in cronManager.stopAll() above. Kept as
+  // imports for backwards compat with any code that still references
+  // them; they emit a deprecation WARN.
+  // (intentionally not called here — see the comment above)
+
 
   // Stop Discord bots
   await stopBot();
