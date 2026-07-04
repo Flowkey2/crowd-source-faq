@@ -1,0 +1,90 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Yaksha FAQ Portal — GitHub Pages deployment
+#
+#  Builds the Vite SPA and deploys apps/frontend/dist/ to GitHub Pages.
+#  This replaces the default "Deploy from a branch" Pages setting that was
+#  failing because the repo root doesn't contain a deployable site artifact.
+#
+#  The actual production deployment still happens via .github/workflows/
+#  build-production.yml (Docker + VPS) — this Pages deploy is for the
+#  https://vicharanashala.github.io/crowd-source-faq/ preview URL only.
+#
+#  Triggers:
+#    • Push to main (auto deploy)
+#    • Manual workflow_dispatch
+#
+#  Note: The deployed site shows the frontend only. The backend API
+#  (samagama.in/csfaq backend) is NOT reachable from GitHub Pages, so
+#  any feature that calls the backend will fail at runtime. This is
+#  purely a preview/deployment surface.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Vite SPA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter yaksha-faq-frontend build
+
+      - name: Add .nojekyll (disable Jekyll processing of _next/, etc.)
+        run: touch apps/frontend/dist/.nojekyll
+
+      - name: Copy 404.html fallback (Vite SPA client-side routing)
+        run: |
+          if [ -f apps/frontend/dist/index.html ]; then
+            cp apps/frontend/dist/index.html apps/frontend/dist/404.html
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/frontend/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

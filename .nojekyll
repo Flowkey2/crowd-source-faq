@@ -1,0 +1,7 @@
+# .nojekyll
+#
+# Tells GitHub Pages to skip Jekyll processing of the site.
+# Without this file, Jekyll ignores files/folders starting with _ (e.g.
+# Vite's _next/ assets, _astro/, etc.). Adding this marker at the repo
+# root means even the "Deploy from a branch" default Pages setting
+# produces a working site instead of a broken one.
