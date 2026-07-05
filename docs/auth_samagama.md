@@ -30,6 +30,7 @@ After your auth handler verifies credentials and creates/updates the session, ma
 ```
 POST https://samagama.in/csfaq/api/auth/bridge/exchange
 Content-Type: application/json
+X-Bridge-Secret-Index: 0
 
 {
   "email": "alice@example.com",
@@ -60,8 +61,10 @@ The response looks like this:
 Store `token` in a cookie named `yaksha_session` with these attributes:
 
 ```
-Set-Cookie: yaksha_session=<token>; Domain=.samagama.in; Path=/; Secure; SameSite=Lax
+Set-Cookie: yaksha_session=<token>; Domain=.samagama.in; Path=/; Secure; SameSite=Lax; Max-Age=604800
 ```
+
+`Max-Age=604800` matches the 7-day JWT lifetime — without it, the cookie becomes a session cookie and the user is logged out when they close their browser.
 
 **Critical:** the cookie must be readable by JavaScript on the `/csfaq` page (so our frontend can mirror it into localStorage). Therefore:
 
@@ -103,7 +106,10 @@ function signBridgeRequest(email, displayName, secret) {
 const { ts, sig } = signBridgeRequest('alice@example.com', 'Alice Smith', BRIDGE_SHARED_SECRET);
 const res = await fetch('https://samagama.in/csfaq/api/auth/bridge/exchange', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Bridge-Secret-Index': '0',
+  },
   body: JSON.stringify({
     email: 'alice@example.com',
     displayName: 'Alice Smith',
@@ -112,8 +118,8 @@ const res = await fetch('https://samagama.in/csfaq/api/auth/bridge/exchange', {
   }),
 });
 const { token } = await res.json();
-// Set the cookie:
-res.headers.append('Set-Cookie', `yaksha_session=${token}; Domain=.samagama.in; Path=/; Secure; SameSite=Lax`);
+// Set the cookie via Set-Cookie header (Node http.ServerResponse):
+res.setHeader('Set-Cookie', `yaksha_session=${token}; Domain=.samagama.in; Path=/; Secure; SameSite=Lax; Max-Age=604800`);
 ```
 
 ### Optional header: secret index
@@ -132,10 +138,11 @@ For the initial rollout, **don't set this header** — we use only one secret.
 
 ## Security notes
 
-  * **Replay protection**: the bridge endpoint rejects any request whose `ts` is more than 60 seconds off from our server clock. Make sure your `ts` is generated close to when the POST is sent.
+  * **Replay protection**: the bridge endpoint requires `ts` to be within **±60 seconds** of our server clock at the moment the POST arrives. Generate `ts` close to the request send time — don't precompute and cache it.
   * **Constant-time comparison**: our backend uses timing-safe HMAC comparison; you don't need to do anything special on your side.
-  * **HTTPS only**: the bridge endpoint refuses non-HTTPS requests. Make sure you're POSTing to `https://samagama.in/csfaq/api/auth/bridge/exchange`.
+  * **HTTPS only**: the bridge must be called over HTTPS. Our backend sits behind your reverse proxy at `/csfaq/api/*` — your TLS termination (nginx, Cloudflare, AWS ALB, etc.) is what enforces this, not the Node app. Make sure the reverse proxy rejects plaintext HTTP on `/csfaq/api/auth/bridge/exchange`.
   * **User privacy**: we don't share any data with samagama.in beyond the JWT we return. We log the bridge login (email + timestamp) for audit purposes.
+  * **Secret and JWT are separate**: `BRIDGE_SHARED_SECRET` (HMAC) and `JWT_SECRET` (JWT signing) are unrelated. Rotating one does not invalidate tokens signed with the other. See "Secret rotation" below.
 
 ---
 
@@ -160,7 +167,7 @@ For the initial rollout, **don't set this header** — we use only one secret.
 If you want to test the integration on localhost before deploying:
 
   1. Update your local `samagama.in` config to POST to `http://localhost:6767/csfaq/api/auth/bridge/exchange` (or your local port).
-  2. Use a separate `BRIDGE_SHARED_SECRET` value for local dev. Our backend in dev mode accepts any non-empty value for the secret as long as it matches what you POST.
+  2. Use a separate `BRIDGE_SHARED_SECRET` value for local dev. The contract is the same as production — the HMAC must match exactly. There's no dev-mode bypass.
   3. The cookie `Domain=.samagama.in` won't work on `localhost` (browsers reject that). For local testing, just **omit `Domain=`** — the cookie will be scoped to `localhost` and our `/csfaq` local frontend will still read it.
 
 ---
@@ -170,16 +177,16 @@ If you want to test the integration on localhost before deploying:
 When you need to rotate `BRIDGE_SHARED_SECRET` (recommended every 90 days, or immediately if compromised):
 
 1. Generate a new 32-byte hex secret: `openssl rand -hex 32`
-2. **Both teams** update their env vars to support both old and new:
+2. **Both teams** update their env vars to support both old and new (new first = index 0):
    ```
    BRIDGE_SHARED_SECRET=<new_secret>,<old_secret>
    ```
-   (Comma-separated, new first = index 0)
-3. **All new bridge requests** must use the new secret (index 0).
-4. **Old bridge requests** (already-issued JWTs in cookies) keep working — the cookie's JWT was signed with the old secret. The middleware verifies it via the fallback index.
-5. After **7 days** (longer than the longest JWT lifetime), the old secret can be removed.
+3. **All new bridge requests** must use the new secret (index 0). Send `X-Bridge-Secret-Index: 0` on the POST.
+4. **Old bridge requests still arrive** during the rotation window — our backend accepts index 1 as a fallback. Once your side has fully cut over to index 0 and the rotation window has passed, you can drop index 1.
+5. **JWTs in existing cookies are unaffected.** Those JWTs are signed with `JWT_SECRET`, not with `BRIDGE_SHARED_SECRET`. They keep working until their own `exp` (7 days), regardless of HMAC secret rotation.
+6. After **7 days** (one full JWT lifetime), the old HMAC secret can be removed from `BRIDGE_SHARED_SECRET`.
 
-Our backend supports this rotation out of the box — no code changes needed.
+Our backend supports this rotation out of the box — no code changes needed on our side.
 
 ---
 
@@ -200,7 +207,10 @@ async function bridgeToCsfaq(user) {
   try {
     const res = await fetch('https://samagama.in/csfaq/api/auth/bridge/exchange', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Bridge-Secret-Index': '0',
+      },
       body: JSON.stringify({ email: user.email, displayName: user.name, ts, sig }),
       // 5-second timeout — don't block samagama.in's login if our backend is slow
       signal: AbortSignal.timeout(5000),
@@ -210,16 +220,8 @@ async function bridgeToCsfaq(user) {
       return;
     }
     const { token } = await res.json();
-    // Set the cookie on samagama.in's response
-    res.cookies?.set?.('yaksha_session', token, {
-      domain: '.samagama.in',
-      path: '/',
-      secure: true,
-      sameSite: 'lax',
-      // NO httpOnly — our /csfaq frontend needs to read this
-    });
-    // If you don't have res.cookies, append Set-Cookie header directly:
-    res.setHeader('Set-Cookie', `yaksha_session=${token}; Domain=.samagama.in; Path=/; Secure; SameSite=Lax`);
+    // Set the cookie on samagama.in's response — use res.setHeader (Node http.ServerResponse):
+    res.setHeader('Set-Cookie', `yaksha_session=${token}; Domain=.samagama.in; Path=/; Secure; SameSite=Lax; Max-Age=604800`);
   } catch (err) {
     console.error('csfaq bridge error:', err);
     // Don't block login — /csfaq will just not be auto-signed-in for this user
