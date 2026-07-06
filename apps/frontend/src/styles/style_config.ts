@@ -409,3 +409,48 @@ export const authInfoBox         = 'mt-3 rounded-xl border border-border bg-mist
 export const authTitle           = 'text-base font-serif text-ink';
 export const authHintSoft        = 'text-[11px] text-ink-soft mt-1';
 export const authHintFaint       = 'text-[10px] text-ink-faint -mt-2';
+
+/* ── 34. Trust / Source badges (TrustBadge / SourceBadge) ─────────
+ * Small inline pills on FAQ list items showing how the answer was
+ * verified. Replaces the old raw purple-50 / amber-200 / emerald-300
+ * colours that bypassed the theme tokens. All variants use the
+ * --accent-rgb / --success-rgb / --warning-rgb / --border-rgb tokens
+ * so they re-skin with the theme. */
+
+export const trustBadgeBase      = 'ml-1.5 text-[11px] px-2 py-0.5 rounded-md border font-medium';
+export const trustBadgeHigh      = 'bg-mist text-ink-soft border-border';                           /* Official */
+export const trustBadgeExpert    = 'bg-accent/10 text-accent border-accent/30';                     /* Admin Approved */
+export const trustBadgeMedium    = 'bg-success-light text-success border-success/30';                /* Community Approved */
+export const trustBadgeLow       = 'bg-warning-light text-warning border-warning/30';                /* Community (low trust) */
+
+export const sourceBadgeBase     = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider';
+export const sourceBadgeCommunity = 'bg-info-light text-info border border-info/30';                 /* From Community */
+export const sourceBadgeZoom     = 'bg-[#2D8CFF]/10 text-[#2D8CFF] border border-[#2D8CFF]/25';         /* From Meetings — BRAND ASSET for Zoom third-party colour */
+export const sourceBadgeZoomCircle = 'bg-[#2D8CFF]/10 text-[#2D8CFF]';                                 /* Numbered circle variant of sourceBadgeZoom */
+export const sourceBadgeExpert   = 'bg-accent/10 text-accent border border-accent/30';               /* Expert Verified */
+
+/* The Zoom brand-blue tones (#2D8CFF) live in the brand guideline as
+   a third-party brand asset and intentionally do NOT respond to theme
+   switches. Centralised here so the colour lives in one place. */
+export const zoomBrandBlue       = '#2D8CFF';                   /* Zoom brand — fixed colour */
+
+/* ── 35. Flag-outdated (warning-action) button + modal ──────────
+ * Used by FlagOutdatedButton.tsx. The button itself is semantic
+ * warning (orange) — "this answer needs updating". The error
+ * banner underneath the form uses danger (red). */
+
+export const flagButtonIdle        = 'text-xs px-2 py-1 rounded border transition-colors border-border text-ink-soft hover:border-warning/40 hover:text-warning';
+export const flagButtonDisabled    = 'text-xs px-2 py-1 rounded border transition-colors border-border text-ink-faint cursor-not-allowed';
+
+export const flagSubmitButton       = 'px-4 py-2 text-xs rounded-xl bg-warning text-accent-text hover:bg-warning/85 transition-colors disabled:opacity-50';
+export const flagCancelButton      = 'px-4 py-2 text-xs rounded-xl border border-border text-ink-soft hover:bg-mist transition-colors';
+export const flagErrorBanner        = 'text-xs text-danger bg-danger-light rounded-lg px-3 py-2';
+
+/* ── 36. Modal dialog shell ──────────────────────────────────────
+ * Used by native <dialog> elements opened via .showModal(). */
+
+export const dialogShell           = 'm-auto rounded-2xl border border-border shadow-2xl bg-card p-0 backdrop:bg-ink/30 backdrop:backdrop-blur-sm';
+export const dialogBody            = 'p-6 space-y-4 min-w-72';
+export const dialogTitleSm         = 'text-sm font-semibold text-ink';
+export const dialogLabel           = 'text-xs text-ink-soft';
+export const dialogLabelFaint      = 'block mt-1 text-ink-faint';
