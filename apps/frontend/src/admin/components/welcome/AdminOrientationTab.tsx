@@ -209,7 +209,7 @@ export default function AdminOrientationTab() {
                   </button>
                   <button
                     onClick={() => handleDelete(o._id)}
-                    className="px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                    className="px-3 py-1.5 text-sm text-danger hover:bg-danger/10 rounded-md transition-colors"
                   >
                     Delete
                   </button>

@@ -144,7 +144,7 @@ export default function AdminMentorsTab() {
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEdit(m)} className="text-xs text-ink-soft hover:text-ink font-medium transition-colors">Edit</button>
                   <span className="text-border">·</span>
-                  <button onClick={() => handleArchive(m._id)} className="text-xs text-red-500/60 hover:text-red-500 font-medium transition-colors">Archive</button>
+                  <button onClick={() => handleArchive(m._id)} className="text-xs text-danger/60 hover:text-danger font-medium transition-colors">Archive</button>
                 </div>
               </div>
             </div>

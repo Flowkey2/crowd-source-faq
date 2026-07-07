@@ -133,14 +133,14 @@ export default function AdminOnboardingTab() {
                   {u.orientationCompleted ? (
                     <span className="text-accent font-medium">Completed</span>
                   ) : (
-                    <span className="text-yellow-500 font-medium">Pending</span>
+                    <span className="text-warning font-medium">Pending</span>
                   )}
                 </td>
                 <td className="px-6 py-4">{u.projectAssigned || '-'}</td>
                 <td className="px-6 py-4">{u.mentorAssigned || '-'}</td>
                 <td className="px-6 py-4">
                   {u.projectSelectionLocked ? (
-                    <span className="px-2 py-1 bg-red-500/10 text-red-500 rounded text-xs font-semibold">Locked</span>
+                    <span className="px-2 py-1 bg-danger/10 text-danger rounded text-xs font-semibold">Locked</span>
                   ) : (
                     <span className="px-2 py-1 bg-accent/10 text-accent rounded text-xs font-semibold">Unlocked</span>
                   )}
