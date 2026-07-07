@@ -10,6 +10,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { protect } from '../../middleware/auth.js';
 import { authorize } from '../../middleware/authShared.js';
+import { adminWriteLimiter } from '../../utils/auth/rateLimit.js';
 import {
   addDocument,
   listDocuments,
@@ -56,6 +57,12 @@ const upload = multer({
 const router = Router();
 router.use(protect);
 router.use(authorize('admin', 'ai_moderator', 'moderator'));
+// S5-13 (MEDIUM) fix: previously this route had no rate limiter.
+// An admin (or attacker with a stolen admin JWT) could spam
+// POST /admin/documents to fill the AI quota + disk. Apply the
+// existing adminWriteLimiter (per-identity, 30/min) which is the
+// project-wide pattern for admin write endpoints.
+router.use(adminWriteLimiter);
 router.post('/documents', upload.single('file'), addDocument);
 router.get('/documents', listDocuments);
 router.delete('/documents/:id', deleteDocument);
