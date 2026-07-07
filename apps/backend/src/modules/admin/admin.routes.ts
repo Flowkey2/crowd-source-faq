@@ -67,6 +67,14 @@ import {
   revealApiKey,
   listProviderModels,
 } from '../ai/ai-config.controller.js';
+import {
+  listAiApiLogs,
+  getAiApiLogStats,
+  getAiApiLogById,
+  exportAiApiLogs,
+  previewAiApiLogCleanup,
+  cleanupAiApiLogs,
+} from '../ai/ai-api-call.controller.js';
 
 import adminProjectsRoutes from './admin-projects.routes.js';
 import { getQueueStats, getQueueJob } from './queue.controller.js';
@@ -136,6 +144,15 @@ router.post('/ai/config/reset-usage', resetAiUsage);
 router.get('/ai/providers', getAiProviders);
 router.get('/ai/providers/test', testProvider);
 router.get('/ai/providers/models', listProviderModels);
+
+// AI API call audit log (per-call observability for the model browser + every
+// chat/embedding request). Admin-only; surfaces as "AI API Logs" page.
+router.get('/ai/api-logs', listAiApiLogs);
+router.get('/ai/api-logs/stats', getAiApiLogStats);
+router.get('/ai/api-logs/:id', getAiApiLogById);
+router.get('/ai/api-logs/export', exportAiApiLogs);
+router.post('/ai/api-logs/cleanup/preview', previewAiApiLogCleanup);
+router.post('/ai/api-logs/cleanup', cleanupAiApiLogs);
 router.get('/ai/config/api-key/:provider', revealApiKey);
 
 router.post('/faq', createFAQ);

@@ -62,6 +62,7 @@ const AdminZoomMeetings = lazy(() => import('../admin/pages/AdminZoomMeetings'))
 const AdminZoomInsights = lazy(() => import('../admin/pages/AdminZoomInsights'));
 const AdminDocumentInsights = lazy(() => import('../admin/pages/AdminDocumentInsights'));
 const AdminAISettings = lazy(() => import('../admin/pages/AdminAISettings'));
+const AdminApiLogsPage = lazy(() => import('../admin/pages/AdminApiLogsPage'));
 const FaqReview = lazy(() => import('../admin/pages/FaqReview'));
 const AdminAutoAnswerQueue = lazy(() => import('../admin/pages/AdminAutoAnswerQueue'));
 const AdminFAQAudit = lazy(() => import('../admin/pages/AdminFAQAudit'));
@@ -196,6 +197,7 @@ export default function AppRoutes() {
           <Route path="/admin/zoom-insights" element={<RouteElement name="admin-zoom-insights"><AdminRoute><AdminLayout><AdminZoomInsights /></AdminLayout></AdminRoute></RouteElement>} />
           <Route path="/admin/document-insights" element={<RouteElement name="admin-document-insights"><AdminRoute><AdminLayout><FeatureGate featureKey="documentPipeline" featureLabel="Document Pipeline"><AdminDocumentInsights /></FeatureGate></AdminLayout></AdminRoute></RouteElement>} />
           <Route path="/admin/settings/ai" element={<RouteElement name="admin-settings-ai"><AdminRoute><AdminLayout><AdminAISettings /></AdminLayout></AdminRoute></RouteElement>} />
+          <Route path="/admin/ai-logs" element={<RouteElement name="admin-ai-logs"><AdminRoute><AdminLayout><AdminApiLogsPage /></AdminLayout></AdminRoute></RouteElement>} />
           <Route path="/admin/faqs/review" element={<RouteElement name="admin-faqs-review"><AdminRoute><AdminLayout><FeatureGate featureKey="faqFreshness" featureLabel="FAQ Freshness Review"><FaqReview /></FeatureGate></AdminLayout></AdminRoute></RouteElement>} />
           <Route path="/admin/welcome" element={<RouteElement name="admin-welcome"><AdminRoute><AdminLayout><AdminWelcomePage /></AdminLayout></AdminRoute></RouteElement>} />
           <Route path="/admin/zoom" element={<RouteElement name="admin-zoom"><AdminRoute><AdminLayout><AdminZoomAssessmentsPage /></AdminLayout></AdminRoute></RouteElement>} />

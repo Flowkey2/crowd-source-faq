@@ -126,4 +126,141 @@ export async function cleanupOldApiCalls(days: number = 90): Promise<number> {
   return result.deletedCount ?? 0;
 }
 
+/**
+ * Cleanup filter shape accepted by the admin UI. Exactly ONE of the
+ * four modes must be populated — the controller validates this before
+ * calling {@link cleanupApiCalls}.
+ *
+ *   days:     delete every doc older than `days` days from now
+ *   fromDate: ISO date or datetime; required when using toDate mode
+ *   toDate:   ISO date or datetime; required when using fromDate mode
+ *   date:     ISO date 'YYYY-MM-DD'; required for both day-mode and
+ *             hour-mode. The hour mode adds an optional `hour` (0-23)
+ *             which narrows to a single hour bucket of that day.
+ */
+export interface AiApiCallCleanupFilter {
+  days?: number;
+  fromDate?: string;
+  toDate?: string;
+  date?: string;
+  hour?: number;
+}
+
+/**
+ * Cleanup payload returned to the admin UI. Includes the resolved
+ * bounds so the UI can show the human-readable range that was
+ * actually deleted (not just the raw request input).
+ */
+export interface AiApiCallCleanupResult {
+  deletedCount: number;
+  matchedQuery: Record<string, unknown>;
+  mode: 'age' | 'range' | 'day' | 'hour';
+  // The resolved [gte, lt] window in ISO form, when not 'age' mode.
+  // The 'age' mode just has cutoffIso.
+  cutoffIso?: string;
+  fromIso?: string;
+  toIso?: string;
+}
+
+/**
+ * Build the Mongo query for one of the four cleanup modes without
+ * running the delete. Exposed for the preview / count endpoint the
+ * UI hits before confirmation.
+ *
+ * Throws an Error with a user-friendly message if the filter is
+ * malformed — the controller maps that to a 400.
+ */
+export function buildCleanupQuery(filter: AiApiCallCleanupFilter): {
+  query: Record<string, unknown>;
+  mode: AiApiCallCleanupResult['mode'];
+  cutoffIso?: string;
+  fromIso?: string;
+  toIso?: string;
+} {
+  if (typeof filter.days === 'number' && Number.isFinite(filter.days) && filter.days > 0) {
+    const cutoff = new Date(Date.now() - filter.days * 24 * 60 * 60 * 1000);
+    return {
+      query: { createdAt: { $lt: cutoff } },
+      mode: 'age',
+      cutoffIso: cutoff.toISOString(),
+    };
+  }
+
+  if (filter.fromDate || filter.toDate) {
+    if (!filter.fromDate || !filter.toDate) {
+      throw new Error('fromDate and toDate must both be provided for range cleanup.');
+    }
+    const from = new Date(filter.fromDate);
+    const to = new Date(filter.toDate);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      throw new Error('fromDate and toDate must be valid ISO date strings.');
+    }
+    if (from >= to) {
+      throw new Error('fromDate must be earlier than toDate.');
+    }
+    return {
+      query: { createdAt: { $gte: from, $lt: to } },
+      mode: 'range',
+      fromIso: from.toISOString(),
+      toIso: to.toISOString(),
+    };
+  }
+
+  if (filter.date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(filter.date)) {
+      throw new Error('date must be in YYYY-MM-DD format.');
+    }
+    // Parse as UTC midnight so the day boundary is timezone-independent.
+    // The UI displays dates in the admin's local tz, but the cut is
+    // always on UTC to match how Mongo stores createdAt.
+    const dayStart = new Date(`${filter.date}T00:00:00.000Z`);
+    if (Number.isNaN(dayStart.getTime())) {
+      throw new Error('date must be a valid calendar day.');
+    }
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    if (typeof filter.hour === 'number') {
+      if (!Number.isInteger(filter.hour) || filter.hour < 0 || filter.hour > 23) {
+        throw new Error('hour must be an integer between 0 and 23.');
+      }
+      const hourStart = new Date(dayStart.getTime() + filter.hour * 60 * 60 * 1000);
+      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
+      return {
+        query: { createdAt: { $gte: hourStart, $lt: hourEnd } },
+        mode: 'hour',
+        fromIso: hourStart.toISOString(),
+        toIso: hourEnd.toISOString(),
+      };
+    }
+    return {
+      query: { createdAt: { $gte: dayStart, $lt: dayEnd } },
+      mode: 'day',
+      fromIso: dayStart.toISOString(),
+      toIso: dayEnd.toISOString(),
+    };
+  }
+
+  throw new Error('Specify one of: days, fromDate+toDate, date, or date+hour.');
+}
+
+/**
+ * Granular cleanup. Resolves the filter, runs a single bulk delete,
+ * and returns the resolved bounds + count. Reuses
+ * {@link buildCleanupQuery} for the parsing + bounds math so the
+ * preview endpoint and the destructive endpoint cannot disagree.
+ */
+export async function cleanupApiCalls(
+  filter: AiApiCallCleanupFilter,
+): Promise<AiApiCallCleanupResult> {
+  const { query, mode, cutoffIso, fromIso, toIso } = buildCleanupQuery(filter);
+  const result = await AiApiCall.deleteMany(query);
+  return {
+    deletedCount: result.deletedCount ?? 0,
+    matchedQuery: query,
+    mode,
+    cutoffIso,
+    fromIso,
+    toIso,
+  };
+}
+
 export const AiApiCall = mongoose.model<IAiApiCall>('AiApiCall', aiApiCallSchema);
