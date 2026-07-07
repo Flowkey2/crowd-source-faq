@@ -11,13 +11,23 @@ interface ProviderOverride { hasKey: boolean; baseURL: string; model: string; }
 interface AiFeatureConfig { enabled: boolean; model: string; temperature: number; maxTokens: number; }
 interface EmbeddingConfig { provider: 'local' | 'huggingface' | 'openai' | 'custom'; model: string; dimensions: number; baseURL: string; hasKey: boolean; }
 interface AiConfig {
-  activeProvider: 'anthropic' | 'openai' | 'xai' | 'minimax' | 'gemini' | 'custom';
+  // Backend can return the sentinel 'none' when no provider has any key
+  // configured — this signals "system is unconfigured" rather than
+  // pretending one of the providers is active.
+  activeProvider: 'anthropic' | 'openai' | 'xai' | 'minimax' | 'gemini' | 'custom' | 'none';
   providers: { anthropic: ProviderOverride; openai: ProviderOverride; xai: ProviderOverride; minimax: ProviderOverride; gemini: ProviderOverride; custom: ProviderOverride; };
   features: { duplicateDetection: AiFeatureConfig; knowledgeExtraction: AiFeatureConfig; searchSummarization: AiFeatureConfig; faqGeneration: AiFeatureConfig; };
   embedding: EmbeddingConfig;
   usage: { totalRequests: number; totalEstimatedCost: number; lastResetAt: string; };
   isActive: boolean;
 }
+
+// Per-provider hasKey truth from /admin/ai/providers. This is the
+// authoritative source for "is the provider actually wired up" —
+// `isActive` alone only tells you which one is selected, not whether
+// it has a working API key. Previously the UI conflated the two and
+// showed "Configured ✓ Active" for unconfigured systems.
+type ProviderKeyStatus = Record<'anthropic' | 'openai' | 'xai' | 'minimax' | 'gemini' | 'custom', boolean>;
 
 const PROVIDER_META = {
   anthropic: {
@@ -124,6 +134,12 @@ export default function AdminAISettings() {
   const [success, setSuccess] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [activeProvider, setActiveProvider] = useState<string>('anthropic');
+  // Per-provider hasKey truth, fetched from /admin/ai/providers. Used
+  // by the Provider Health card to surface "No API key" badges so an
+  // unconfigured provider is visibly distinct from a working one.
+  const [providerKeyStatus, setProviderKeyStatus] = useState<ProviderKeyStatus>({
+    anthropic: false, openai: false, xai: false, minimax: false, gemini: false, custom: false,
+  });
   const [features, setFeatures] = useState<AiConfig['features'] | null>(null);
   const [savingProvider, setSavingProvider] = useState(false);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
@@ -161,10 +177,18 @@ export default function AdminAISettings() {
 
   const loadConfig = useCallback(async () => {
     try {
-      const res = await adminApi.get<AiConfig & { hasOverride?: boolean; source?: string }>('/admin/ai/config', {
-        params: activeBatchId ? { batchId: activeBatchId } : undefined,
-      });
-      const data = res.data;
+      // Fetch config and per-provider hasKey in parallel. The config
+      // endpoint alone only tells us which provider is "active" — to
+      // know whether each provider actually has an API key we need the
+      // dedicated providers endpoint. Without this, the UI cannot
+      // distinguish a working provider from an unconfigured one.
+      const [configRes, providersRes] = await Promise.all([
+        adminApi.get<AiConfig & { hasOverride?: boolean; source?: string }>('/admin/ai/config', {
+          params: activeBatchId ? { batchId: activeBatchId } : undefined,
+        }),
+        adminApi.get<{ providers: Array<{ id: string; hasKey: boolean }> }>('/admin/ai/providers'),
+      ]);
+      const data = configRes.data;
       setConfig(data);
       setActiveProvider(data.activeProvider);
       setFeatures(data.features);
@@ -172,10 +196,16 @@ export default function AdminAISettings() {
       setProviderDrafts(prev => {
         const next = { ...prev };
         for (const p of ['anthropic','openai','xai','minimax','gemini','custom'] as ProviderKey[]) {
-          next[p] = { ...next[p], apiKey: '', baseURL: data.providers[p]?.baseURL ?? '', model: data.providers[p]?.model ?? '' };
+          next[p] = { ...next[p], apiKey: '' , baseURL: data.providers[p]?.baseURL ?? '', model: data.providers[p]?.model ?? '' };
         }
         return next;
       });
+      // Seed providerKeyStatus from the providers endpoint.
+      const status: ProviderKeyStatus = { anthropic: false, openai: false, xai: false, minimax: false, gemini: false, custom: false };
+      for (const p of providersRes.data.providers ?? []) {
+        if (p.id in status) status[p.id as keyof ProviderKeyStatus] = !!p.hasKey;
+      }
+      setProviderKeyStatus(status);
       if (data.embedding) {
         setEmbeddingDraft(prev => ({
           ...prev,
@@ -183,7 +213,7 @@ export default function AdminAISettings() {
           model: data.embedding.model || 'mixedbread-ai/mxbai-embed-large-v1',
           dimensions: data.embedding.dimensions || 1024,
           baseURL: data.embedding.baseURL || '',
-          apiKey: '',
+          apiKey: ''
         }));
       }
     } catch { setError('Failed to load AI configuration.'); }
@@ -226,6 +256,16 @@ export default function AdminAISettings() {
 
   const handleTestProvider = async (provider: string) => {
     setTestingProvider(provider); setTestResult(null);
+    // Pre-flight guard: if the provider has no API key configured,
+    // skip the network round-trip and surface a clean message. The
+    // backend now does the same check on its side, but doing it here
+    // saves the request entirely and gives the UI a stable, non-401
+    // error string to display.
+    if (!providerKeyStatus[provider as keyof ProviderKeyStatus]) {
+      setTestResult({ provider, ok: false, message: `No API key configured for ${provider}. Save a key first, then test.` });
+      setTestingProvider(null);
+      return;
+    }
     try { const res = await adminApi.get<{ ok: boolean; message: string }>('/admin/ai/providers/test', { params: { provider } }); setTestResult({ provider, ok: res.data.ok, message: res.data.message }); }
     catch (err: any) { setTestResult({ provider, ok: false, message: err.response?.data?.message || 'Connection failed' }); }
     finally { setTestingProvider(null); }
@@ -759,16 +799,32 @@ export default function AdminAISettings() {
               const isActive = activeProvider === key;
               const isTesting = testingProvider === key;
               const res = testResult?.provider === key ? testResult : null;
+              const hasKey = providerKeyStatus[key];
               return (
                 <div key={key} className={`p-3 rounded-xl border transition-colors ${isActive ? 'border-accent bg-accent/5' : 'border-border'}`}>
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-accent' : 'bg-border-medium'}`} />
+                    <div className={`w-2 h-2 rounded-full ${isActive && hasKey ? 'bg-success' : isActive && !hasKey ? 'bg-danger' : 'bg-border-medium'}`} />
                     <p className="text-xs font-medium text-ink-soft">{PROVIDER_META[key].label}</p>
                     {isActive && <span className="ml-auto text-[9px] font-bold text-accent uppercase tracking-wide">Active</span>}
                   </div>
-                  <p className="text-[10px] text-ink-faint mt-1 font-mono">{isActive ? 'Configured' : 'Not active'}</p>
+                  {/* Provider health now distinguishes three states instead of two:
+                      - isActive + hasKey  → "Active · Configured"
+                      - isActive + !hasKey → "Active · No API key" (red)
+                      - !isActive          → "Not active" */}
+                  <p className={`text-[10px] mt-1 font-mono ${isActive && !hasKey ? 'text-danger font-semibold' : 'text-ink-faint'}`}>
+                    {isActive
+                      ? hasKey
+                        ? 'Configured'
+                        : 'Active but no API key configured'
+                      : 'Not active'}
+                  </p>
                   {res && <p className={`text-[10px] mt-1.5 font-semibold ${res.ok ? 'text-success' : 'text-danger'}`}>{res.ok ? '✓ Connected' : `✕ ${res.message}`}</p>}
-                  <button onClick={() => handleTestProvider(key)} disabled={isTesting} className="mt-2 text-[10px] text-accent hover:text-accent-hover font-medium disabled:opacity-40 transition-colors flex items-center gap-1">
+                  <button
+                    onClick={() => handleTestProvider(key)}
+                    disabled={isTesting || !hasKey}
+                    title={!hasKey ? 'Save an API key before testing the connection.' : undefined}
+                    className="mt-2 text-[10px] text-accent hover:text-accent-hover font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  >
                     {isTesting ? <><span className="w-3 h-3 border border-accent/30 border-t-accent rounded-full animate-spin inline-block" />Testing…</> : 'Test connection'}
                   </button>
                 </div>

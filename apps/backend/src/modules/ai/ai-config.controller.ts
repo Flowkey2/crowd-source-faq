@@ -99,9 +99,13 @@ export const getAiConfig = async (req: Request, res: Response): Promise<void> =>
     } else {
       view = { providers: {}, features: {} };
     }
+    // activeProvider may now be `null` (no provider has any key). The
+    // frontend reads `activeProvider` and falls back to the anthropic
+    // default if it's missing — emit the literal string 'none' so the
+    // UI can branch on it instead of pretending anthropic is active.
     res.json({
       ...view,
-      activeProvider,
+      activeProvider: activeProvider ?? 'none',
       ...(batchIdObjectId ? { hasOverride: !!config, batchId: batchIdObjectId } : { hasOverride: !!config }),
     });
   } catch (error) {
@@ -327,7 +331,11 @@ export const getAiProviders = async (_req: Request, res: Response): Promise<void
     isActive: key === activeProvider,
   }));
 
-  res.json({ providers, activeProvider });
+  // Same 'none' sentinel as getAiConfig — when no provider has any key,
+  // the frontend needs an explicit signal that the system is unconfigured
+  // so it can show "No AI provider configured" instead of pretending one is
+  // active.
+  res.json({ providers, activeProvider: activeProvider ?? 'none' });
 };
 
 // ─── GET /api/admin/ai/providers/test?provider=X ─────────────────────────────
@@ -339,6 +347,26 @@ export const testProvider = async (req: Request, res: Response): Promise<void> =
   if (!provider || !validProviders.includes(provider)) {
     res.status(400).json({ ok: false, message: 'Invalid provider' });
     return;
+  }
+
+  // Short-circuit when the provider has no API key configured. Without
+  // this, the chat call would still fire — hitting the provider's
+  // `/messages` or `/chat/completions` endpoint with an empty Bearer
+  // token, getting back a 401, and only THEN returning ok:false. The
+  // resulting error string is also ugly (e.g. "anthropic error: {"error":
+  // "invalid x-api-key"}") and confuses admins. A clean pre-flight
+  // check gives a deterministic, actionable message.
+  if (provider !== 'embedding') {
+    const config = await AiConfig.findOne({ isActive: true, batchId: null });
+    const dbKey = config ? config.getApiKey(provider as AIProviderType) : null;
+    const envKey = process.env[envKeyName(provider as AIProviderType)] ?? '';
+    if (!dbKey && !envKey) {
+      res.json({
+        ok: false,
+        message: `No API key configured for ${provider}. Set ${envKeyName(provider as AIProviderType)} in env or save a key in AI Settings.`,
+      });
+      return;
+    }
   }
 
   try {
@@ -445,9 +473,16 @@ function envModelName(p: AIProviderType): string {
 
 /**
  * Determine the active provider: prefer DB-configured keys; fall back to env vars.
- * Priority: anthropic > openai > xai > minimax.
+ * Priority: anthropic > openai > xai > minimax > gemini > custom.
+ *
+ * Returns `null` when no provider has a usable API key (neither DB nor env).
+ * Previously this function fell through to `'custom'` on miss, which made
+ * the admin UI display "Configured ✓ Active" for a completely non-functional
+ * provider (since `custom` always "passed" `isActive`). Callers must treat
+ * `null` as "AI is not configured — the system is degraded, surface this to
+ * the admin UI instead of pretending a provider is active."
  */
-export async function detectActiveProvider(): Promise<AIProviderType> {
+export async function detectActiveProvider(): Promise<AIProviderType | null> {
   // S5-C6 (CRITICAL) fix: scope to global config.
   const config = await AiConfig.findOne({ isActive: true, batchId: null });
   const hasKey = (p: AIProviderType) => {
@@ -471,5 +506,6 @@ export async function detectActiveProvider(): Promise<AIProviderType> {
   if (hasKey('xai'))       return 'xai';
   if (hasKey('minimax'))   return 'minimax';
   if (hasKey('gemini'))    return 'gemini';
-  return 'custom';
+  // No DB row AND no env-var key for any provider → nothing to talk to.
+  return null;
 }
