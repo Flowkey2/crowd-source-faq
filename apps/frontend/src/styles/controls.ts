@@ -37,3 +37,17 @@ export const adminBtnSmOutline    = 'px-2.5 py-1 rounded-md text-[10px] border b
 /* ── Community Buttons ──────────────────────────────────────────── */
 export const buttonCommunityAsk   = 'inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl text-[13px] font-medium bg-accent/14 border border-accent/30 text-accent transition-all duration-200 hover:bg-accent/18 hover:border-accent/40 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgb(var(--accent-rgb)/0.15)] active:translate-y-0 active:bg-accent/14 dark:bg-accent/10 dark:border-accent/25 dark:hover:bg-accent/15 dark:hover:border-accent/40 dark:hover:text-accent-hover dark:hover:shadow-[0_0_20px_rgb(var(--accent-rgb)/0.15)] dark:active:bg-accent/12 dark:active:shadow-[0_0_8px_rgb(var(--accent-rgb)/0.10)]';
 
+
+/* ── Form inputs ──────────────────────────────────────────────────
+ * The standard text input used by admin forms (rule, w-full, etc.)
+ * — promoted because 8+ files were inlining the same 8 utility
+ * classes. If a second-input style appears, add a sibling export
+ * (inputReadOnly, inputError, etc.) rather than overloading this. */
+export const inputStandard       = 'w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all';
+
+/* ── Form input (with focus ring) ────────────────────────────────
+ * Variant for forms that want a visible focus-ring affordance in
+ * addition to the border-color change. AdminProjectsPage uses this
+ * across 10+ fields. Keep the base classes (padding/radius/border)
+ * in sync with inputStandard above. */
+export const inputStandardRing  = 'w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all';

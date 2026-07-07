@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import adminApi from '../../utils/adminApi';
+import { inputStandard } from '../../../styles/style_config';
 
 interface Mentor {
   _id: string;
@@ -176,16 +177,16 @@ export default function AdminMentorsTab() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Name *</label>
-                      <input type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" />
+                      <input type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputStandard} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Email *</label>
-                      <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" />
+                      <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputStandard} />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">Designation</label>
-                    <input type="text" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="e.g. Senior Engineer" />
+                    <input type="text" value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} className={inputStandard} placeholder="e.g. Senior Engineer" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">Bio</label>
@@ -194,11 +195,11 @@ export default function AdminMentorsTab() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Office Hours</label>
-                      <input type="text" value={form.officeHours} onChange={e => setForm(f => ({ ...f, officeHours: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="Mon/Wed 3-5pm" />
+                      <input type="text" value={form.officeHours} onChange={e => setForm(f => ({ ...f, officeHours: e.target.value }))} className={inputStandard} placeholder="Mon/Wed 3-5pm" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Meeting Link</label>
-                      <input type="url" value={form.meetingLink} onChange={e => setForm(f => ({ ...f, meetingLink: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="https://zoom.us/j/..." />
+                      <input type="url" value={form.meetingLink} onChange={e => setForm(f => ({ ...f, meetingLink: e.target.value }))} className={inputStandard} placeholder="https://zoom.us/j/..." />
                     </div>
                   </div>
                 </form>

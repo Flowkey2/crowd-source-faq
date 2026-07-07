@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminApi from '../../utils/adminApi';
+import { inputStandard } from '../../../styles/style_config';
 
 interface OnboardingUser {
   _id: string;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { motion, AnimatePresence } from 'framer-motion';
 import adminApi from '../utils/adminApi';
+import { inputStandardRing } from '../../styles/style_config';
 
 interface Project {
   _id: string;
@@ -294,7 +295,7 @@ export default function AdminProjectsPage() {
                         required
                         value={formData.projectName}
                         onChange={e => setFormData(prev => ({ ...prev, projectName: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. AjraSakha"
                       />
                     </div>
@@ -306,7 +307,7 @@ export default function AdminProjectsPage() {
                         rows={3}
                         value={formData.description}
                         onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all resize-none"
+                        className={inputStandardRing + " resize-none"}
                         placeholder="Project overview..."
                       />
                     </div>
@@ -317,7 +318,7 @@ export default function AdminProjectsPage() {
                         required
                         value={formData.mentor}
                         onChange={e => setFormData(prev => ({ ...prev, mentor: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                       >
                         <option value="">-- Select a Mentor --</option>
                         {mentors.map(m => (
@@ -331,7 +332,7 @@ export default function AdminProjectsPage() {
                       <select
                         value={formData.status}
                         onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                       >
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
@@ -355,7 +356,7 @@ export default function AdminProjectsPage() {
                         type="text"
                         value={formData.skills}
                         onChange={e => setFormData(prev => ({ ...prev, skills: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. React, Node.js, AI"
                       />
                     </div>
@@ -370,7 +371,7 @@ export default function AdminProjectsPage() {
                         rows={2}
                         value={formData.problemStatement}
                         onChange={e => setFormData(prev => ({ ...prev, problemStatement: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all resize-none"
+                        className={inputStandardRing + " resize-none"}
                         placeholder="What problem does this project solve?"
                       />
                     </div>
@@ -381,7 +382,7 @@ export default function AdminProjectsPage() {
                         rows={2}
                         value={formData.whyMatters}
                         onChange={e => setFormData(prev => ({ ...prev, whyMatters: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all resize-none"
+                        className={inputStandardRing + " resize-none"}
                         placeholder="Impact of the project..."
                       />
                     </div>
@@ -392,7 +393,7 @@ export default function AdminProjectsPage() {
                         type="text"
                         value={formData.outcomes}
                         onChange={e => setFormData(prev => ({ ...prev, outcomes: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. Build and deploy a real-world product"
                       />
                     </div>
@@ -402,7 +403,7 @@ export default function AdminProjectsPage() {
                       <select
                         value={formData.difficulty}
                         onChange={e => setFormData(prev => ({ ...prev, difficulty: e.target.value as 'Beginner Friendly' | 'Intermediate' | 'Advanced' }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                       >
                         <option value="Beginner Friendly">Beginner Friendly</option>
                         <option value="Intermediate">Intermediate</option>
@@ -416,7 +417,7 @@ export default function AdminProjectsPage() {
                         type="text"
                         value={formData.weeklyCommitment}
                         onChange={e => setFormData(prev => ({ ...prev, weeklyCommitment: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. 10-15 hours"
                       />
                     </div>
@@ -427,7 +428,7 @@ export default function AdminProjectsPage() {
                         type="text"
                         value={formData.teamSize}
                         onChange={e => setFormData(prev => ({ ...prev, teamSize: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. 2-4 members"
                       />
                     </div>
@@ -439,7 +440,7 @@ export default function AdminProjectsPage() {
                         min="1"
                         value={formData.capacity}
                         onChange={e => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. 30"
                       />
                     </div>
@@ -450,7 +451,7 @@ export default function AdminProjectsPage() {
                         type="text"
                         value={formData.techStack}
                         onChange={e => setFormData(prev => ({ ...prev, techStack: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all"
+                        className={inputStandardRing + ""}
                         placeholder="e.g. React, Node, MongoDB"
                       />
                     </div>

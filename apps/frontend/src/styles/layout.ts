@@ -24,3 +24,10 @@ export const stackSm        = 'space-y-2';
 export const stackMd        = 'space-y-3';
 export const stackLg        = 'space-y-4';
 export const stackXs        = 'space-y-1';
+
+/* ── Modal backdrop ──────────────────────────────────────────────
+ * Two z-indexes: z50 (default) and z60 (above page chrome like the
+ * guided tour). The backdrop is a fixed overlay with the dim+blur
+ * combo that matches the existing admin-* modals. */
+export const modalBackdrop       = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';
+export const modalBackdropHigh   = 'fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';

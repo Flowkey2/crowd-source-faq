@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import adminApi from '../../utils/adminApi';
+import { inputStandard } from '../../../styles/style_config';
 
 /* ────────────────────────────────────────
    Icon Palette (20 curated icons)
@@ -370,7 +371,7 @@ export default function AdminTimelineBuilderTab() {
                         type="text" required
                         value={form.title}
                         onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                        className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all"
+                        className={inputStandard}
                         placeholder="e.g. MARK Attendance"
                       />
                     </div>
@@ -419,7 +420,7 @@ export default function AdminTimelineBuilderTab() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Completion Type</label>
-                      <select value={form.completionType} onChange={e => setForm(f => ({ ...f, completionType: e.target.value as any }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all">
+                      <select value={form.completionType} onChange={e => setForm(f => ({ ...f, completionType: e.target.value as any }))} className={inputStandard}>
                         <option value="manual">Manual</option>
                         <option value="checklist">Checklist</option>
                         <option value="automatic">Automatic</option>
@@ -427,14 +428,14 @@ export default function AdminTimelineBuilderTab() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Status</label>
-                      <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all">
+                      <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} className={inputStandard}>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Estimated Time</label>
-                      <input type="text" value={form.estimatedTime} onChange={e => setForm(f => ({ ...f, estimatedTime: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="e.g. ~2 min daily" />
+                      <input type="text" value={form.estimatedTime} onChange={e => setForm(f => ({ ...f, estimatedTime: e.target.value }))} className={inputStandard} placeholder="e.g. ~2 min daily" />
                     </div>
                   </div>
 
@@ -454,11 +455,11 @@ export default function AdminTimelineBuilderTab() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Rewards</label>
-                      <input type="text" value={form.rewards} onChange={e => setForm(f => ({ ...f, rewards: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="e.g. Unlocks Spurti Points" />
+                      <input type="text" value={form.rewards} onChange={e => setForm(f => ({ ...f, rewards: e.target.value }))} className={inputStandard} placeholder="e.g. Unlocks Spurti Points" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">Mentor Notes</label>
-                      <input type="text" value={form.mentorNotes} onChange={e => setForm(f => ({ ...f, mentorNotes: e.target.value }))} className="w-full bg-bg border border-border rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-accent transition-all" placeholder="Internal note for mentor" />
+                      <input type="text" value={form.mentorNotes} onChange={e => setForm(f => ({ ...f, mentorNotes: e.target.value }))} className={inputStandard} placeholder="Internal note for mentor" />
                     </div>
                   </div>
 
