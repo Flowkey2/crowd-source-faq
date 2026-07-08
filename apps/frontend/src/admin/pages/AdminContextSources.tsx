@@ -641,7 +641,7 @@ export function UploadDocumentView({ bare = false }: { bare?: boolean } = {}) {
  * list is shared with WebUrlView but we keep our own self-contained
  * instance so the two tabs are independent.
  */
-export function PasteTextView({ bare = false }: { bare?: boolean } = {}) {
+export function PasteTextView({ bare = false, onJumpToUpload }: { bare?: boolean; onJumpToUpload?: () => void } = {}) {
   const [title, setTitle] = useState<string>('');
   const [text, setText] = useState<string>('');
   const [pending, setPending] = useState<boolean>(false);
@@ -688,6 +688,18 @@ export function PasteTextView({ bare = false }: { bare?: boolean } = {}) {
 
   const body = (
     <>
+      {onJumpToUpload && (
+        <div className="flex items-center justify-end mb-3">
+          <button
+            type="button"
+            onClick={onJumpToUpload}
+            className="px-3 py-1.5 rounded-lg border border-accent text-accent text-xs font-semibold hover:bg-accent/10"
+            data-testid="admin-paste-text-upload-cta"
+          >
+            Upload a file instead
+          </button>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-3" data-testid="paste-text-form">
         <div>
           <label className="block text-xs font-medium text-ink-soft mb-1" htmlFor="paste-text-title">

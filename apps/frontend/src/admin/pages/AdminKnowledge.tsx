@@ -128,7 +128,7 @@ function RecordingIngestionNotice() {
  * (`useBodyScrollLock`, `document.getElementById('upload-topic')`)
  * keep working.
  */
-function TabContent({ tab }: { tab: TabKey }) {
+function TabContent({ tab, onJumpToUpload }: { tab: TabKey; onJumpToUpload: () => void }) {
   switch (tab) {
     case 'zoom':
       return (
@@ -148,10 +148,10 @@ function TabContent({ tab }: { tab: TabKey }) {
       return <ZoomInsightsView />;
 
     case 'doc-insights':
-      return <DocumentInsightsView />;
+      return <DocumentInsightsView onJumpToUpload={onJumpToUpload} />;
 
     case 'paste':
-      return <PasteTextView />;
+      return <PasteTextView onJumpToUpload={onJumpToUpload} />;
 
     default:
       // Unreachable — `tab` is constrained upstream.
@@ -226,7 +226,7 @@ export default function AdminKnowledge() {
 
       {/* Body */}
       <div data-testid={`admin-knowledge-tabpanel-${activeTab}`} className="space-y-5">
-        <TabContent tab={activeTab} />
+        <TabContent tab={activeTab} onJumpToUpload={() => setTab('upload')} />
       </div>
       {/* noscript fallback; admin sidebar is the canonical entry
        * for users with JS disabled. */}

@@ -102,7 +102,7 @@ function InsightCardSkeleton() {
  * Named export — the inner tab content. Re-used by the unified
  * `/admin/knowledge` tab page.
  */
-export function DocumentInsightsView() {
+export function DocumentInsightsView({ onJumpToUpload }: { onJumpToUpload?: () => void } = {}) {
   const [insights, setInsights] = useState<DocumentInsight[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -193,14 +193,26 @@ export function DocumentInsightsView() {
           Sorted by how often an UnresolvedSearch log semantically matches — the auto-promote cron uses the
           same signal.
         </p>
-        <button
-          type="button"
-          onClick={handleRunAutoPromote}
-          disabled={promoteLoading}
-          className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 disabled:opacity-50"
-        >
-          {promoteLoading ? 'Running…' : 'Run auto-promote'}
-        </button>
+        <div className="flex items-center gap-2">
+          {onJumpToUpload && (
+            <button
+              type="button"
+              onClick={onJumpToUpload}
+              className="px-3 py-1.5 rounded-lg border border-accent text-accent text-xs font-semibold hover:bg-accent/10"
+              data-testid="admin-doc-insights-upload-cta"
+            >
+              Upload a document
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleRunAutoPromote}
+            disabled={promoteLoading}
+            className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 disabled:opacity-50"
+          >
+            {promoteLoading ? 'Running…' : 'Run auto-promote'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -232,8 +244,17 @@ export function DocumentInsightsView() {
           <InsightCardSkeleton /><InsightCardSkeleton /><InsightCardSkeleton />
         </div>
       ) : insights.length === 0 ? (
-        <div className="admin-card-surface p-12 text-center text-sm text-ink-soft">
-          No {statusFilter.replace('_', ' ')} insights.
+        <div className="admin-card-surface p-12 text-center text-sm text-ink-soft space-y-3">
+          <p>No {statusFilter.replace('_', ' ')} insights.</p>
+          {onJumpToUpload && (
+            <button
+              type="button"
+              onClick={onJumpToUpload}
+              className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90"
+            >
+              Upload a document
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
