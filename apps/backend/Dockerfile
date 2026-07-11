@@ -94,6 +94,7 @@ COPY apps/backend/ ./apps/backend/
 
 # Copy built frontend static assets from frontend-build stage
 COPY --from=frontend-build /app/apps/frontend/dist ./apps/frontend/dist
+COPY apps/frontend/package.json ./apps/frontend/package.json
 
 # Re-run install to make sure all symlinks (workspaces) are properly linked
 RUN pnpm install --frozen-lockfile --offline
